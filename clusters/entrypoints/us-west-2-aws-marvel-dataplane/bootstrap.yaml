@@ -5,9 +5,9 @@ metadata:
   namespace: flux-system
 data:
   CLUSTER_NAME: us-west-2-aws-marvel-dataplane
-  CLUSTER_ZONE: us-west-2-aws-marvel.oatlabs-production.oatmilk.work
+  CLUSTER_ZONE: us-west-2-aws-marvel.oatlabs-staging.oatmilk.work
   ACME_EMAIL: tilak.madichetti@gmail.com
-  ACME_ENV: production # staging | production
+  ACME_ENV: staging # staging | production
   OP_VAULT: OatLabs
   OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/api_token_secret
   OP_VAULT_GHCR_USERNAME: GHCR/username
