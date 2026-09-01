@@ -24,7 +24,10 @@ spec:
   interval: 1m0s
   ref:
     branch: main
-  url: https://github.com/TilakMaddy/layer-zero.git
+  secretRef:
+    name: flux-system
+  recurseSubmodules: true
+  url: https://github.com/TilakMaddy/backoffice-dev.git
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -34,7 +37,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  path: ./platform/bootstrap
+  path: ./clusters/packages/layer-zero/platform/bootstrap
   prune: true
   wait: true
   sourceRef:
@@ -44,3 +47,4 @@ spec:
     substitute:
       CLUSTER_CONFIG: platform-vars
       PLATFORM_SOURCE: platform-foundation
+      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
