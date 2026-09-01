@@ -1,0 +1,75 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: movies-db
+  namespace: default
+spec:
+  instances: ${PG_INSTANCES}
+
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+
+  affinity:
+    nodeSelector:
+      node-role.kubernetes.io/postgres: ""
+    tolerations:
+      - key: node-role.kubernetes.io/postgres
+        effect: NoSchedule
+        operator: Exists
+    enablePodAntiAffinity: true
+    topologyKey: topology.kubernetes.io/zone
+    podAntiAffinityType: required
+
+  storage:
+    size: ${PG_STORAGE}
+
+  walStorage:
+    size: ${PG_WAL_STORAGE}
+
+  postgresql:
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+
+  imageCatalogRef:
+    apiGroup: postgresql.cnpg.io
+    kind: ClusterImageCatalog
+    name: movies-db-postgresql-minimal-trixie
+    major: 18
+
+  bootstrap:
+    initdb:
+      dataChecksums: true
+
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: testing-role
+  namespace: default
+spec:
+  cluster:
+    name: movies-db
+  name: user123 # must match
+  login: true
+  passwordSecret:
+    name: my-pass
+
+
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/basic-auth
+metadata:
+  name: my-pass
+  namespace: default
+  labels:
+    cnpg.io/reload: "true"
+data:
+  username: dXNlcjEyMw== #user123
+  password: cGFzczEyMw== #pass123

@@ -1,0 +1,9 @@
+bootstrap target="":
+    ./scripts/bootstrap.sh {{ target }}
+
+destroy target="":
+    ./scripts/destroy.sh {{ target }}
+
+psql db="movies-db" user="user123" dbname="app" zone="us-west-2-aws-marvel.oatlabs-production.oatmilk.work":
+    @PGPASSWORD="${PGPASSWORD:-pass123}" \
+    psql "host={{ db }}.{{ zone }} port=5432 user={{ user }} dbname={{ dbname }} sslmode=verify-full sslrootcert=tests/stg-root-x1.pem"

@@ -1,0 +1,44 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: movies-db-edge
+  namespace: default
+spec:
+  cluster:
+    name: movies-db
+
+  instances: ${PG_POOLER_INSTANCES}
+  type: rw
+
+  template:
+    spec:
+      containers:
+        - name: pgbouncer
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+      topologySpreadConstraints:
+        - topologyKey: topology.kubernetes.io/zone
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              cnpg.io/poolerName: movies-db-edge
+
+  pgbouncer:
+    poolMode: session
+
+    parameters:
+      max_client_conn: "100"
+      default_pool_size: "10"
+      client_tls_sslmode: require
+      server_tls_sslmode: verify-full
+
+    clientTLSSecret:
+      name: cluster-certificate-key
+    serverCASecret:
+      name: movies-db-ca

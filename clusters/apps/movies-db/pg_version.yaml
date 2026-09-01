@@ -1,0 +1,8 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: ClusterImageCatalog
+metadata:
+  name: movies-db-postgresql-minimal-trixie
+spec:
+  images:
+  - major: 18
+    image: ghcr.io/cloudnative-pg/postgresql:18.4-202608030910-minimal-trixie@sha256:229ab83c0639d294042ca747745fb214db690ade64d5d59131a135825b994391

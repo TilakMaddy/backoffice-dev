@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-vars
+  namespace: flux-system
+data:
+  CLUSTER_NAME: us-west-2-aws-marvel-dataplane
+  CLUSTER_ZONE: us-west-2-aws-marvel.oatlabs-production.oatmilk.work
+  ACME_EMAIL: tilak.madichetti@gmail.com
+  OP_VAULT: OatLabs
+  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/api_token_secret
+  OP_VAULT_GHCR_USERNAME: GHCR/username
+  OP_VAULT_GHCR_TOKEN: GHCR/pull_token
+  ENVOY_REPLICAS: "3"
+  SHIM_REPLICAS: "3"
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: platform-foundation
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/TilakMaddy/layer-zero.git
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bootstrap
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./platform/bootstrap
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: platform-foundation
+  postBuild:
+    substitute:
+      CLUSTER_CONFIG: platform-vars
+      PLATFORM_SOURCE: platform-foundation

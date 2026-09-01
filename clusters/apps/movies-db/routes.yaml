@@ -1,0 +1,52 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: movies-db-route
+  namespace: default
+  annotations:
+    oatlabs.oatmilk.work/external-dns: "true"
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: postgres-direct
+  hostnames:
+    - movies-db.${CLUSTER_ZONE}
+  rules:
+    - backendRefs:
+        - name: movies-db-edge
+          port: 5432
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: pg-movies-db-allowlists
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "default/gateway/postgres-direct"
+      operation:
+        jsonPath: "$.filter_chains[?(@.name == 'tlsroute/default/movies-db-route')]"
+        path: "/filters/0"
+        op: add
+        value:
+          name: envoy.filters.network.rbac
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+            stat_prefix: allowlist_movies_db
+            rules:
+              action: ALLOW
+              policies:
+                allowed-clients:
+                  permissions:
+                    - any: true
+                  principals:
+                    - direct_remote_ip: { address_prefix: "0.0.0.0", prefix_len: 0 }
+                    - remote_ip: { address_prefix: "0.0.0.0", prefix_len: 0 }

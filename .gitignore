@@ -1,0 +1,4 @@
+.env
+docs/
+.DS_Store
+.claude/
