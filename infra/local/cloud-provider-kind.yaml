@@ -1,0 +1,7 @@
+services:
+  cloud-provider:
+    image: registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.11.1
+    network_mode: "kind"
+    command: ["--gateway-channel", "disabled", "--enable-lb-port-mapping"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

@@ -1,0 +1,67 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: local-platform
+
+# ======== Control Plane Nodes =========
+
+nodes:
+- role: control-plane
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: control-plane
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-a
+
+# ======== Worker Plane Nodes ===========
+
+# general purpose. (for absorbing operators, controllers, etc)
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: general
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-a
+
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: general
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-b
+
+# reserved for postgres.
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: postgres
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-a
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        taints:
+          - key: node-role.kubernetes.io/postgres
+            effect: NoSchedule
+
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: postgres
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-b
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        taints:
+          - key: node-role.kubernetes.io/postgres
+            effect: NoSchedule
+
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: postgres
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-c
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        taints:
+          - key: node-role.kubernetes.io/postgres
+            effect: NoSchedule

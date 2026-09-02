@@ -1,0 +1,9 @@
+up:
+    kind create cluster --config=cluster-config.yaml --wait 5m
+    kubectl label node -l k8s-labels.oatmilk.work/node-purpose=postgres node-role.kubernetes.io/postgres=
+    kubectl label node -l k8s-labels.oatmilk.work/node-purpose=general node-role.kubernetes.io/general=
+    docker compose -f cloud-provider-kind.yaml up -d
+
+down:
+    docker compose -f cloud-provider-kind.yaml down
+    kind delete cluster --name local-platform
