@@ -18,7 +18,9 @@ main() {
 
     start_epoch=$(date +%s)
     log "Start time: $(date -r "$start_epoch" '+%Y-%m-%d %H:%M:%S %Z')"
-    log "Target:     $cluster"
+    log "Target:     $env_name/$cluster"
+    log "Entrypoint: $cluster_path"
+    log "Kubeconfig: $cluster_kubeconfig"
     log "Repo:       $owner/$repository"
     log "Branch:     $branch"
 
@@ -41,7 +43,7 @@ main() {
       --owner="$owner" \
       --repository="$repository" \
       --branch="$branch" \
-      --path="$entrypoints_path/$cluster" \
+      --path="$cluster_path" \
       --personal
 
     end_epoch=$(date +%s)

@@ -7,19 +7,19 @@ Step 1: Bootstrap the Kubernetes infrastructure on AWS for all clusters in `conf
 just apply
 ```
 
-Step 2: Fetch Kubernetes and Talos credentials for the us-west-2-aws-marvel-dataplane cluster from terraform state and save them to `.kube/` and `.talos/` respectively.
+Step 2: Fetch Kubernetes and Talos credentials for the us-west-2-aws-backoffice-dataplane cluster from terraform state and save them to `.kube/` and `.talos/` respectively.
 ```sh
-just fetch-config us-west-2-aws-marvel-dataplane
+just fetch-config us-west-2-aws-backoffice-dataplane
 ```
 
 Step 3: Now you are ready to deploy apps with `kubectl` with the below configuration.
 ```bash
-export KUBECONFIG=.kube/us-west-2-aws-marvel-dataplane.config
+export KUBECONFIG=.kube/us-west-2-aws-backoffice-dataplane.config
 ```
 
 Step 4: To use `talosctl` for cluster administration
 ```bash
-export TALOSCONFIG=.talos/us-west-2-aws-marvel-dataplane.config
+export TALOSCONFIG=.talos/us-west-2-aws-backoffice-dataplane.config
 ```
 
 # FAQ

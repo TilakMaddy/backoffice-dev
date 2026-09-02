@@ -1,6 +1,10 @@
+# Bootstrap the flux entrypoint at clusters/entrypoints/<env>/<cluster>, e.g.
+#   just bootstrap staging/us-west-2-aws-backoffice-dataplane
+# Omit the target to pick one interactively.
 bootstrap target="":
     ./scripts/bootstrap.sh {{ target }}
 
+# Tear the same <env>/<cluster> target down, ahead of terraform destroy.
 destroy target="":
     ./scripts/destroy.sh {{ target }}
 

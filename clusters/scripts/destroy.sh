@@ -5,7 +5,7 @@ set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
 # Reverse of the dependsOn chain, which spans three files: `apps` and
-# `bootstrap` are declared in clusters/entrypoints/<cluster>/{main,bootstrap}.yaml,
+# `bootstrap` are declared in clusters/entrypoints/<env>/<cluster>/{main,bootstrap}.yaml,
 # and everything between them in the layer-zero package under platform/.
 # Children are deleted before their parent so each inventory is garbage-collected
 # in order rather than cascading out of a single prune.
@@ -93,7 +93,8 @@ main() {
 
     start_epoch=$(date +%s)
     log "Start time: $(date -r "$start_epoch" '+%Y-%m-%d %H:%M:%S %Z')"
-    log "Target:     $cluster"
+    log "Target:     $env_name/$cluster"
+    log "Kubeconfig: $cluster_kubeconfig"
 
     log "Suspending the git source and the root kustomization so flux stops syncing"
     halt_reconciliation

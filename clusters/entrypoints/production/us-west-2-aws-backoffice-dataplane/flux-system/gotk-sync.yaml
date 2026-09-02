@@ -20,7 +20,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m0s
-  path: ./clusters/entrypoints/us-west-2-aws-marvel-dataplane
+  path: ./clusters/entrypoints/production/us-west-2-aws-backoffice-dataplane
   prune: true
   sourceRef:
     kind: GitRepository

@@ -3,17 +3,22 @@
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # Path of the flux entrypoints, both relative to the repo root -- which is what
-# flux bootstrap --path wants -- and absolute, for walking it locally.
+# flux bootstrap --path wants -- and absolute, for walking it locally. Every
+# entrypoint lives at <entrypoints_path>/<env>/<cluster>.
 entrypoints_path="clusters/entrypoints"
 entrypoints_dir="$repo_root/$entrypoints_path"
 
-# Every clusters/entrypoints/<cluster> directory is a target, printed in the
-# form the scripts take as their argument.
+# Every clusters/entrypoints/<env>/<cluster> directory is a target, printed in
+# the "<env>/<cluster>" form the scripts take as their argument. An env holding
+# no cluster directory -- local/ with just a README, say -- contributes nothing.
 discover_targets() {
-    local cluster_dir
-    for cluster_dir in "$entrypoints_dir"/*/; do
-        [[ -d "$cluster_dir" ]] || continue
-        basename "$cluster_dir"
+    local env_dir cluster_dir
+    for env_dir in "$entrypoints_dir"/*/; do
+        [[ -d "$env_dir" ]] || continue
+        for cluster_dir in "$env_dir"*/; do
+            [[ -d "$cluster_dir" ]] || continue
+            printf '%s/%s\n' "$(basename "$env_dir")" "$(basename "$cluster_dir")"
+        done
     done
 }
 
@@ -29,30 +34,60 @@ select_target() {
     fzf --prompt="$prompt > " --height='~40%' --no-multi <<<"$targets"
 }
 
-# Turns a <cluster> argument -- or an interactive pick when it is omitted --
-# into the cluster and cluster_kubeconfig the scripts run against.
+# Turns an <env>/<cluster> argument -- or an interactive pick when it is omitted
+# -- into the env_name, cluster, cluster_path (the flux bootstrap --path) and
+# cluster_kubeconfig the scripts run against.
+#
+# The kubeconfig is derived, not configured: infra/<env>/.kube/<cluster>.config,
+# or ~/.kube/config for the local env. Set KUBECONFIG_PATH_<env>_<cluster>, with
+# every '-' written as '_', to override that for one target.
 resolve_target() {
-    local arg="$1" prompt="$2" cluster_env
+    local arg="$1" prompt="$2" target override_var
 
     if [[ -n "$arg" ]]; then
-        cluster="$arg"
+        target="$arg"
     else
-        cluster="$(select_target "$prompt")" || true
-        if [[ -z "$cluster" ]]; then
-            printf 'usage: %s <cluster>\n' "$0" >&2
+        target="$(select_target "$prompt")" || true
+        if [[ -z "$target" ]]; then
+            printf 'usage: %s <env>/<cluster>\n' "$0" >&2
             exit 1
         fi
     fi
 
-    cluster_env="KUBECONFIG_PATH_${cluster//-/_}"
-    cluster_kubeconfig="${!cluster_env:-}"
+    env_name="${target%%/*}"
+    cluster="${target#*/}"
 
-    if [[ -z "$cluster_kubeconfig" ]]; then
-        printf 'error: %s is not set (kubeconfig path for cluster %q)\n' "$cluster_env" "$cluster" >&2
+    if [[ "$target" != */* || -z "$env_name" || -z "$cluster" || "$cluster" == */* ]]; then
+        printf 'error: target %q is not in <env>/<cluster> form\n' "$target" >&2
+        printf 'usage: %s <env>/<cluster>   (e.g. staging/us-west-2-aws-backoffice-dataplane)\n' "$0" >&2
         exit 1
     fi
+
+    cluster_path="$entrypoints_path/$env_name/$cluster"
+
+    if [[ ! -d "$repo_root/$cluster_path" ]]; then
+        printf 'error: no entrypoint for %q at %s\n' "$target" "$repo_root/$cluster_path" >&2
+        exit 1
+    fi
+
+    override_var="KUBECONFIG_PATH_${env_name//-/_}_${cluster//-/_}"
+    cluster_kubeconfig="${!override_var:-}"
+
+    if [[ -z "$cluster_kubeconfig" ]]; then
+        if [[ "$env_name" == "local" ]]; then
+            cluster_kubeconfig="$HOME/.kube/config"
+        else
+            cluster_kubeconfig="$repo_root/infra/$env_name/.kube/$cluster.config"
+        fi
+    fi
+
     if [[ ! -f "$cluster_kubeconfig" ]]; then
-        printf 'error: kubeconfig for %q not found at %s\n' "$cluster" "$cluster_kubeconfig" >&2
+        printf 'error: kubeconfig for %q not found at %s\n' "$target" "$cluster_kubeconfig" >&2
+        if [[ "$env_name" != "local" ]]; then
+            printf 'error: fetch it with "cd %s/infra/%s && just fetch-config %s"\n' \
+                "$repo_root" "$env_name" "$cluster" >&2
+        fi
+        printf 'error: or set %s to point somewhere else\n' "$override_var" >&2
         exit 1
     fi
 }
