@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-vars
+  namespace: flux-system
+data:
+  CLUSTER_NAME: us-west-2-aws-backoffice-dataplane
+  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work
+  ACME_EMAIL: tilak.madichetti@gmail.com
+  ACME_ENV: staging # staging | production
+  OP_VAULT: OatLabs
+  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
+  OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
+  OP_VAULT_GHCR_TOKEN: GHCR/e6wg2mswa77c44e76spqs6tp6q # pull_token
+  ENVOY_REPLICAS: "3"
+  SHIM_REPLICAS: "3"
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: platform-foundation
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: staging
+  secretRef:
+    name: flux-system
+  recurseSubmodules: true
+  url: https://github.com/TilakMaddy/backoffice-dev.git
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bootstrap
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./clusters/packages/layer-zero/platform/bootstrap
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: platform-foundation
+  postBuild:
+    substitute:
+      CLUSTER_CONFIG: platform-vars
+      PLATFORM_SOURCE: platform-foundation
+      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+      PLATFORM_NAMESPACE: platform-system

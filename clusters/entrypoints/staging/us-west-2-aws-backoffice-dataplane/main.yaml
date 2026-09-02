@@ -4,7 +4,7 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
-  CLUSTER_ZONE: us-west-2-aws-marvel.oatlabs-staging.oatmilk.work
+  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work
   PG_INSTANCES: "3"
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi

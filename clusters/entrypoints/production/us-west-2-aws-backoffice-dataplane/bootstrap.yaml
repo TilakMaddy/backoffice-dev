@@ -4,10 +4,10 @@ metadata:
   name: platform-vars
   namespace: flux-system
 data:
-  CLUSTER_NAME: us-west-2-aws-marvel-dataplane
-  CLUSTER_ZONE: us-west-2-aws-marvel.oatlabs-staging.oatmilk.work
+  CLUSTER_NAME: us-west-2-aws-backoffice-dataplane
+  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
   ACME_EMAIL: tilak.madichetti@gmail.com
-  ACME_ENV: staging # staging | production
+  ACME_ENV: production # staging | production
   OP_VAULT: OatLabs
   OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
   OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
@@ -24,7 +24,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    branch: production
   secretRef:
     name: flux-system
   recurseSubmodules: true
