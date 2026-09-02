@@ -9,6 +9,7 @@ metadata:
 spec:
   parentRefs:
     - name: gateway
+      namespace: ${PLATFORM_NAMESPACE}
       sectionName: postgres-direct
   hostnames:
     - movies-db.${CLUSTER_ZONE}
