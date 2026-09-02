@@ -39,6 +39,6 @@ spec:
       server_tls_sslmode: verify-full
 
     clientTLSSecret:
-      name: cluster-certificate-key
+      name: zone-certificate-tls
     serverCASecret:
       name: movies-db-ca

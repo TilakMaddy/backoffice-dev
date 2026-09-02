@@ -4,4 +4,4 @@ metadata:
   name: movies-db
   labels:
     oatlabs.oatmilk.work/gateway-access: "true"
-    oatlabs.oatmilk.work/cluster-certificate-key: "true"
+    oatlabs.oatmilk.work/zone-certificate-tls: "true"
