@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-vars
+  namespace: flux-system
+data:
+  CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
+  PG_INSTANCES: "3"
+  PG_POOLER_INSTANCES: "3"
+  PG_STORAGE: 1Gi
+  PG_WAL_STORAGE: 1Gi
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./clusters/apps
+  prune: true
+  wait: true
+  dependsOn:
+    - name: bootstrap
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  postBuild:
+    substitute:
+      PLATFORM_NAMESPACE: platform-system
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+---
