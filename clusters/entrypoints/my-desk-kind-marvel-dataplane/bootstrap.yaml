@@ -9,9 +9,9 @@ data:
   ACME_EMAIL: tilak.madichetti@gmail.com
   ACME_ENV: staging # staging | production
   OP_VAULT: OatLabs
-  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/api_token_secret
-  OP_VAULT_GHCR_USERNAME: GHCR/username
-  OP_VAULT_GHCR_TOKEN: GHCR/pull_token
+  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
+  OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
+  OP_VAULT_GHCR_TOKEN: GHCR/e6wg2mswa77c44e76spqs6tp6q # pull_token
   ENVOY_REPLICAS: "3"
   SHIM_REPLICAS: "3"
 
