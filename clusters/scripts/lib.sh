@@ -36,18 +36,20 @@ select_target() {
 
 # Turns an <env>/<cluster> argument -- or an interactive pick when it is omitted
 # -- into the env_name, cluster, cluster_path (the flux bootstrap --path) and
-# cluster_kubeconfig the scripts run against.
+# cluster_kubeconfig the scripts run against. The mode -- "bootstrap" or
+# "destroy" -- doubles as the picker prompt and decides whether the entrypoint
+# has to exist already: destroy needs one, bootstrap creates it.
 #
 # The kubeconfig is derived, not configured: infra/<env>/.kube/<cluster>.config,
 # or ~/.kube/config for the local env. Set KUBECONFIG_PATH_<env>_<cluster>, with
 # every '-' written as '_', to override that for one target.
 resolve_target() {
-    local arg="$1" prompt="$2" target override_var
+    local arg="$1" mode="$2" target override_var
 
     if [[ -n "$arg" ]]; then
         target="$arg"
     else
-        target="$(select_target "$prompt")" || true
+        target="$(select_target "$mode")" || true
         if [[ -z "$target" ]]; then
             printf 'usage: %s <env>/<cluster>\n' "$0" >&2
             exit 1
@@ -65,7 +67,10 @@ resolve_target() {
 
     cluster_path="$entrypoints_path/$env_name/$cluster"
 
-    if [[ ! -d "$repo_root/$cluster_path" ]]; then
+    # Only destroy insists on an entrypoint that is already there. Bootstrapping
+    # a cluster for the first time is exactly the case where it is not, so the
+    # directory gets created instead.
+    if [[ "$mode" != bootstrap && ! -d "$repo_root/$cluster_path" ]]; then
         printf 'error: no entrypoint for %q at %s\n' "$target" "$repo_root/$cluster_path" >&2
         exit 1
     fi

@@ -24,6 +24,11 @@ main() {
     log "Repo:       $owner/$repository"
     log "Branch:     $branch"
 
+    if [[ ! -d "$repo_root/$cluster_path" ]]; then
+        log "Creating the entrypoint directory $cluster_path"
+        mkdir -p "$repo_root/$cluster_path"
+    fi
+
     log "Seeding the 1Password service account token"
 
     vault_namespace=external-secrets-system
