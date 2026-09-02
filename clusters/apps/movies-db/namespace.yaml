@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: movies-db
+  labels:
+    oatlabs.oatmilk.work/gateway-access: "true"
+    oatlabs.oatmilk.work/cluster-certificate-key: "true"

@@ -2,7 +2,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: movies-db
-  namespace: default
+  namespace: movies-db
 spec:
   instances: ${PG_INSTANCES}
 
@@ -51,7 +51,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: DatabaseRole
 metadata:
   name: testing-role
-  namespace: default
+  namespace: movies-db
 spec:
   cluster:
     name: movies-db
@@ -67,7 +67,7 @@ kind: Secret
 type: kubernetes.io/basic-auth
 metadata:
   name: my-pass
-  namespace: default
+  namespace: movies-db
   labels:
     cnpg.io/reload: "true"
 data:

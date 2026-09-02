@@ -49,3 +49,4 @@ spec:
       CLUSTER_CONFIG: platform-vars
       PLATFORM_SOURCE: platform-foundation
       PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+      PLATFORM_NAMESPACE: platform-system

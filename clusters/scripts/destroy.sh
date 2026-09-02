@@ -4,12 +4,16 @@ set -euo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
-# Reverse of the dependsOn chain in clusters/entrypoints/<cluster>/main.yaml.
-stages=(databases shims core base operators secrets-eso secrets-operators)
+# Reverse of the dependsOn chain, which spans three files: `apps` and
+# `bootstrap` are declared in clusters/entrypoints/<cluster>/{main,bootstrap}.yaml,
+# and everything between them in the layer-zero package under platform/.
+# Children are deleted before their parent so each inventory is garbage-collected
+# in order rather than cascading out of a single prune.
+stages=(apps shims core base operators platform secrets-eso secrets-operators secrets bootstrap)
 
 halt_reconciliation() {
     fx suspend source git flux-system
-    fx suspend source git platform-rye
+    fx suspend source git platform-foundation
     fx suspend kustomization flux-system
 }
 
