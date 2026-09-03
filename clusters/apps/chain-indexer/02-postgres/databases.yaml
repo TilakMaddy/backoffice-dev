@@ -1,0 +1,13 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: indexer-db
+  namespace: chain-indexer
+spec:
+  cluster:
+    name: chain-indexer
+  name: indexer-db
+  owner: hasura-role
+  databaseReclaimPolicy: retain
+
+---

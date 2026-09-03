@@ -1,0 +1,27 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: hasura-role
+  namespace: chain-indexer
+spec:
+  cluster:
+    name: chain-indexer
+  name: hasura # must match
+  login: true
+  passwordSecret:
+    name: hasura-pass
+
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/basic-auth
+metadata:
+  name: hasura-pass
+  namespace: chain-indexer
+  labels:
+    cnpg.io/reload: "true"
+data:
+  username: aGFzdXJh #hasura
+  password: cGFzczEyMw== #pass123
+
+---

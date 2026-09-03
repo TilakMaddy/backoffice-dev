@@ -1,7 +1,7 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: ClusterImageCatalog
 metadata:
-  name: movies-db-postgresql-minimal-trixie
+  name: chain-indexer-postgresql-minimal-trixie
 spec:
   images:
   - major: 18

@@ -1,11 +1,11 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Pooler
 metadata:
-  name: movies-db-edge
-  namespace: movies-db
+  name: chain-indexer-edge
+  namespace: chain-indexer
 spec:
   cluster:
-    name: movies-db
+    name: chain-indexer
 
   instances: ${PG_POOLER_INSTANCES}
   type: rw
@@ -27,7 +27,7 @@ spec:
           nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
-              cnpg.io/poolerName: movies-db-edge
+              cnpg.io/poolerName: chain-indexer-edge
 
   pgbouncer:
     poolMode: session
@@ -41,4 +41,4 @@ spec:
     clientTLSSecret:
       name: zone-certificate-tls
     serverCASecret:
-      name: movies-db-ca
+      name: chain-indexer-ca
