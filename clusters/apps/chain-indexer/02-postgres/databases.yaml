@@ -7,7 +7,7 @@ spec:
   cluster:
     name: chain-indexer
   name: indexer-db
-  owner: hasura-role
+  owner: hasura
   databaseReclaimPolicy: retain
 
 ---
