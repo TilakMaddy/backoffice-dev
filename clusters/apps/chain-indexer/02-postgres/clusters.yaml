@@ -6,6 +6,8 @@ metadata:
 spec:
   instances: ${PG_INSTANCES}
 
+  enableSuperuserAccess: true
+
   resources:
     requests:
       memory: "512Mi"
