@@ -58,6 +58,16 @@ spec:
               value: "false"
             - name: HASURA_GRAPHQL_ENABLE_TELEMETRY
               value: "false"
+            # Envio tracks its tables for the `public` role, so unauthenticated
+            # queries must resolve to it rather than being rejected.
+            - name: HASURA_GRAPHQL_UNAUTHORIZED_ROLE
+              value: public
+            # Entity ids and uint256 values exceed IEEE-754; without this they
+            # are returned as JSON numbers and silently lose precision.
+            - name: HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES
+              value: "true"
+            - name: HASURA_GRAPHQL_NO_OF_RETRIES
+              value: "10"
           ports:
             - name: http
               containerPort: 8080
