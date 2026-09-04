@@ -857,19 +857,49 @@ spec:
           },
           {
             "id": 14,
+            "type": "alertlist",
+            "title": "Firing alerts",
+            "description": "Live state of the chain-indexer alert rules. Pending means the condition is true but its 'for' window has not elapsed yet.",
+            "gridPos": {
+              "x": 0,
+              "y": 9,
+              "w": 24,
+              "h": 7
+            },
+            "options": {
+              "viewMode": "list",
+              "groupMode": "default",
+              "maxItems": 20,
+              "sortOrder": 3,
+              "dashboardAlerts": false,
+              "alertName": "",
+              "alertInstanceLabelFilter": "{app=\"chain-indexer\"}",
+              "folder": "",
+              "showInstances": true,
+              "stateFilter": {
+                "firing": true,
+                "pending": true,
+                "noData": true,
+                "normal": false,
+                "error": true
+              }
+            }
+          },
+          {
+            "id": 15,
             "type": "row",
             "title": "Time budget",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 9,
+              "y": 16,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 15,
+            "id": 16,
             "type": "timeseries",
             "title": "Where the wall clock goes",
             "description": "Each series is seconds-per-second, so the stack is the share of wall clock spent in each state. The tallest band is the bottleneck.",
@@ -879,7 +909,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 10,
+              "y": 17,
               "w": 24,
               "h": 8
             },
@@ -972,20 +1002,20 @@ spec:
             }
           },
           {
-            "id": 16,
+            "id": 17,
             "type": "row",
             "title": "Progress",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 18,
+              "y": 25,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 17,
+            "id": 18,
             "type": "timeseries",
             "title": "Block height",
             "description": "Processed block versus the head reported by the source.",
@@ -995,7 +1025,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 19,
+              "y": 26,
               "w": 12,
               "h": 7
             },
@@ -1052,7 +1082,7 @@ spec:
             }
           },
           {
-            "id": 18,
+            "id": 19,
             "type": "timeseries",
             "title": "Blocks behind head",
             "description": "The primary 'is it keeping up' signal.",
@@ -1062,7 +1092,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 19,
+              "y": 26,
               "w": 6,
               "h": 7
             },
@@ -1109,7 +1139,7 @@ spec:
             }
           },
           {
-            "id": 19,
+            "id": 20,
             "type": "timeseries",
             "title": "Buffer saturation",
             "description": "Items in the indexing buffer as a share of the indexer-wide target buffer size.",
@@ -1119,7 +1149,7 @@ spec:
             },
             "gridPos": {
               "x": 18,
-              "y": 19,
+              "y": 26,
               "w": 6,
               "h": 7
             },
@@ -1167,7 +1197,7 @@ spec:
             }
           },
           {
-            "id": 20,
+            "id": 21,
             "type": "timeseries",
             "title": "Throughput",
             "description": "Events and blocks processed per second.",
@@ -1177,7 +1207,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 26,
+              "y": 33,
               "w": 12,
               "h": 7
             },
@@ -1233,7 +1263,7 @@ spec:
             }
           },
           {
-            "id": 21,
+            "id": 22,
             "type": "timeseries",
             "title": "Write latency",
             "description": "Milliseconds from event creation on chain to the write landing in Postgres.",
@@ -1243,7 +1273,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 26,
+              "y": 33,
               "w": 6,
               "h": 7
             },
@@ -1290,7 +1320,7 @@ spec:
             }
           },
           {
-            "id": 22,
+            "id": 23,
             "type": "timeseries",
             "title": "Partitions and concurrency",
             "description": "Fetch partitions and in-flight source queries.",
@@ -1300,7 +1330,7 @@ spec:
             },
             "gridPos": {
               "x": 18,
-              "y": 26,
+              "y": 33,
               "w": 6,
               "h": 7
             },
@@ -1356,20 +1386,20 @@ spec:
             }
           },
           {
-            "id": 23,
+            "id": 24,
             "type": "row",
             "title": "Source and fetching",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 33,
+              "y": 40,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 24,
+            "id": 25,
             "type": "timeseries",
             "title": "Source requests/sec by method",
             "description": "heightPush and heightPushIgnored are the subscription-health signal. A drop to zero with getHeight rising means the push subscription went stale and the indexer fell back to polling.",
@@ -1379,7 +1409,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 34,
+              "y": 41,
               "w": 12,
               "h": 7
             },
@@ -1426,7 +1456,7 @@ spec:
             }
           },
           {
-            "id": 25,
+            "id": 26,
             "type": "timeseries",
             "title": "Avg source request time",
             "description": "Mean latency per data-source call, by method.",
@@ -1436,7 +1466,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 34,
+              "y": 41,
               "w": 12,
               "h": 7
             },
@@ -1483,7 +1513,7 @@ spec:
             }
           },
           {
-            "id": 26,
+            "id": 27,
             "type": "timeseries",
             "title": "Fetch efficiency",
             "description": "How much each block-range fetch is actually returning. Low values mean chatty fetching.",
@@ -1493,7 +1523,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 41,
+              "y": 48,
               "w": 8,
               "h": 7
             },
@@ -1549,7 +1579,7 @@ spec:
             }
           },
           {
-            "id": 27,
+            "id": 28,
             "type": "timeseries",
             "title": "Parse share of fetch time",
             "description": "Share of fetch time spent parsing responses rather than waiting on the network.",
@@ -1559,7 +1589,7 @@ spec:
             },
             "gridPos": {
               "x": 8,
-              "y": 41,
+              "y": 48,
               "w": 8,
               "h": 7
             },
@@ -1607,7 +1637,7 @@ spec:
             }
           },
           {
-            "id": 28,
+            "id": 29,
             "type": "timeseries",
             "title": "Rate-limit events",
             "description": "Log-derived. HyperSync rate limiting is the usual cause of a FETCH bottleneck.",
@@ -1617,7 +1647,7 @@ spec:
             },
             "gridPos": {
               "x": 16,
-              "y": 41,
+              "y": 48,
               "w": 8,
               "h": 7
             },
@@ -1664,20 +1694,20 @@ spec:
             }
           },
           {
-            "id": 29,
+            "id": 30,
             "type": "row",
             "title": "Handlers",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 48,
+              "y": 55,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 30,
+            "id": 31,
             "type": "table",
             "title": "Handler leaderboard",
             "description": "Per contract and event, summed across all chains. Envio does not label handler metrics with chainId, so the Chain selector does not filter this panel. processed is the cumulative handler execution count and matches the row count in Postgres.",
@@ -1687,7 +1717,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 49,
+              "y": 56,
               "w": 14,
               "h": 8
             },
@@ -1874,7 +1904,7 @@ spec:
             }
           },
           {
-            "id": 31,
+            "id": 32,
             "type": "timeseries",
             "title": "Handler calls/sec",
             "description": "Handler execution rate by contract and event.",
@@ -1884,7 +1914,7 @@ spec:
             },
             "gridPos": {
               "x": 14,
-              "y": 49,
+              "y": 56,
               "w": 10,
               "h": 8
             },
@@ -1931,7 +1961,7 @@ spec:
             }
           },
           {
-            "id": 32,
+            "id": 33,
             "type": "timeseries",
             "title": "Processing utilisation",
             "description": "Share of wall clock spent in handlers and entity preloading.",
@@ -1941,7 +1971,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 57,
+              "y": 64,
               "w": 12,
               "h": 7
             },
@@ -1998,7 +2028,7 @@ spec:
             }
           },
           {
-            "id": 33,
+            "id": 34,
             "type": "timeseries",
             "title": "Batch size",
             "description": "Configured max batch size against the live buffer depth.",
@@ -2008,7 +2038,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 57,
+              "y": 64,
               "w": 12,
               "h": 7
             },
@@ -2064,20 +2094,20 @@ spec:
             }
           },
           {
-            "id": 34,
+            "id": 35,
             "type": "row",
             "title": "Storage",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 64,
+              "y": 71,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 35,
+            "id": 36,
             "type": "timeseries",
             "title": "Writes/sec",
             "description": "Successful batch writes to storage.",
@@ -2087,7 +2117,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 65,
+              "y": 72,
               "w": 8,
               "h": 7
             },
@@ -2134,7 +2164,7 @@ spec:
             }
           },
           {
-            "id": 36,
+            "id": 37,
             "type": "timeseries",
             "title": "Avg write duration",
             "description": "Mean time per batch write.",
@@ -2144,7 +2174,7 @@ spec:
             },
             "gridPos": {
               "x": 8,
-              "y": 65,
+              "y": 72,
               "w": 8,
               "h": 7
             },
@@ -2191,7 +2221,7 @@ spec:
             }
           },
           {
-            "id": 37,
+            "id": 38,
             "type": "timeseries",
             "title": "Loads/sec",
             "description": "Entity loads. Reads zero when handlers only create entities and never load them.",
@@ -2201,7 +2231,7 @@ spec:
             },
             "gridPos": {
               "x": 16,
-              "y": 65,
+              "y": 72,
               "w": 8,
               "h": 7
             },
@@ -2248,20 +2278,20 @@ spec:
             }
           },
           {
-            "id": 38,
+            "id": 39,
             "type": "row",
             "title": "Reorgs and rollbacks",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 72,
+              "y": 79,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 39,
+            "id": 40,
             "type": "stat",
             "title": "Reorgs (range)",
             "description": "Reorgs detected over the dashboard time range. Guarded so a quiet chain reads 0, not No data.",
@@ -2271,7 +2301,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2323,7 +2353,7 @@ spec:
             }
           },
           {
-            "id": 40,
+            "id": 41,
             "type": "stat",
             "title": "Rollbacks (range)",
             "description": "Successful rollbacks on reorg.",
@@ -2333,7 +2363,7 @@ spec:
             },
             "gridPos": {
               "x": 4,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2385,7 +2415,7 @@ spec:
             }
           },
           {
-            "id": 41,
+            "id": 42,
             "type": "stat",
             "title": "Events rolled back",
             "description": "Events undone by rollbacks.",
@@ -2395,7 +2425,7 @@ spec:
             },
             "gridPos": {
               "x": 8,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2443,7 +2473,7 @@ spec:
             }
           },
           {
-            "id": 42,
+            "id": 43,
             "type": "stat",
             "title": "Reorg threshold",
             "description": "Whether indexing is currently inside the reorg threshold.",
@@ -2453,7 +2483,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2516,7 +2546,7 @@ spec:
             }
           },
           {
-            "id": 43,
+            "id": 44,
             "type": "stat",
             "title": "Rollback on reorg",
             "description": "Whether rollback on reorg is enabled.",
@@ -2526,7 +2556,7 @@ spec:
             },
             "gridPos": {
               "x": 16,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2589,7 +2619,7 @@ spec:
             }
           },
           {
-            "id": 44,
+            "id": 45,
             "type": "stat",
             "title": "Addresses tracked",
             "description": "Address registrations on chain, static and dynamic.",
@@ -2599,7 +2629,7 @@ spec:
             },
             "gridPos": {
               "x": 20,
-              "y": 73,
+              "y": 80,
               "w": 4,
               "h": 4
             },
@@ -2647,7 +2677,7 @@ spec:
             }
           },
           {
-            "id": 45,
+            "id": 46,
             "type": "timeseries",
             "title": "Rollbacks per hour",
             "description": "All three guarded with or vector(0) so a quiet chain plots a flat 0.",
@@ -2657,7 +2687,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 77,
+              "y": 84,
               "w": 24,
               "h": 7
             },
@@ -2722,20 +2752,20 @@ spec:
             }
           },
           {
-            "id": 46,
+            "id": 47,
             "type": "row",
             "title": "Node.js runtime",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 84,
+              "y": 91,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 47,
+            "id": 48,
             "type": "timeseries",
             "title": "Event loop lag",
             "description": "Sustained lag with idle CPU means a synchronous handler is blocking the loop. Container metrics cannot see this.",
@@ -2745,7 +2775,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 85,
+              "y": 92,
               "w": 12,
               "h": 7
             },
@@ -2819,7 +2849,7 @@ spec:
             }
           },
           {
-            "id": 48,
+            "id": 49,
             "type": "timeseries",
             "title": "Event loop utilisation",
             "description": "Fraction of time the event loop was active.",
@@ -2829,7 +2859,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 85,
+              "y": 92,
               "w": 6,
               "h": 7
             },
@@ -2878,7 +2908,7 @@ spec:
             }
           },
           {
-            "id": 49,
+            "id": 50,
             "type": "timeseries",
             "title": "GC pause",
             "description": "Mean garbage-collection pause by kind.",
@@ -2888,7 +2918,7 @@ spec:
             },
             "gridPos": {
               "x": 18,
-              "y": 85,
+              "y": 92,
               "w": 6,
               "h": 7
             },
@@ -2935,7 +2965,7 @@ spec:
             }
           },
           {
-            "id": 50,
+            "id": 51,
             "type": "timeseries",
             "title": "Heap",
             "description": "V8 heap and process RSS from the runtime registry.",
@@ -2945,7 +2975,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 92,
+              "y": 99,
               "w": 12,
               "h": 7
             },
@@ -3010,7 +3040,7 @@ spec:
             }
           },
           {
-            "id": 51,
+            "id": 52,
             "type": "timeseries",
             "title": "Container CPU / memory",
             "description": "cAdvisor view, for comparison against the in-process numbers.",
@@ -3020,7 +3050,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 92,
+              "y": 99,
               "w": 12,
               "h": 7
             },
@@ -3076,20 +3106,20 @@ spec:
             }
           },
           {
-            "id": 52,
+            "id": 53,
             "type": "row",
             "title": "Logs",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 99,
+              "y": 106,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 53,
+            "id": 54,
             "type": "logs",
             "title": "Errors and warnings",
             "datasource": {
@@ -3098,7 +3128,7 @@ spec:
             },
             "gridPos": {
               "x": 0,
-              "y": 100,
+              "y": 107,
               "w": 12,
               "h": 8
             },
@@ -3124,7 +3154,7 @@ spec:
             }
           },
           {
-            "id": 54,
+            "id": 55,
             "type": "logs",
             "title": "All indexer logs",
             "datasource": {
@@ -3133,7 +3163,7 @@ spec:
             },
             "gridPos": {
               "x": 12,
-              "y": 100,
+              "y": 107,
               "w": 12,
               "h": 8
             },
