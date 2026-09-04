@@ -859,7 +859,7 @@ spec:
             "id": 14,
             "type": "alertlist",
             "title": "Firing alerts",
-            "description": "Live state of the chain-indexer alert rules. Pending means the condition is true but its 'for' window has not elapsed yet.",
+            "description": "Live state of the indexer alert rules. Pending means the condition is true but its 'for' window has not elapsed yet.",
             "gridPos": {
               "x": 0,
               "y": 9,

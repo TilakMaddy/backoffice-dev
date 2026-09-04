@@ -73,7 +73,7 @@ spec:
             datasource:
               type: prometheus
               uid: prometheus
-            expr: min(envoy_cluster_membership_healthy{envoy_cluster_name=~"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/chain-indexer-graphql-route.*"})
+            expr: min(envoy_cluster_membership_healthy{envoy_cluster_name=~"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*"})
             instant: true
         - refId: B
           datasourceUid: __expr__
@@ -530,7 +530,7 @@ spec:
             datasource:
               type: prometheus
               uid: prometheus
-            expr: sum(rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/chain-indexer-graphql-route.*", envoy_response_code_class="5"}[5m])) or vector(0)
+            expr: sum(rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*", envoy_response_code_class="5"}[5m])) or vector(0)
             instant: true
         - refId: B
           datasourceUid: __expr__

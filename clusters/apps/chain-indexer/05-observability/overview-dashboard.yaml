@@ -682,7 +682,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m]))",
+                "expr": "sum(rate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -740,7 +740,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum by (envoy_response_code_class) (rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m]))",
+                "expr": "sum by (envoy_response_code_class) (rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -795,7 +795,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "histogram_quantile(0.50, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "expr": "histogram_quantile(0.50, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*\"}[5m])))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -805,7 +805,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*\"}[5m])))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -815,7 +815,7 @@ spec:
               },
               {
                 "refId": "C",
-                "expr": "histogram_quantile(0.99, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "expr": "histogram_quantile(0.99, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}.*\"}[5m])))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -870,7 +870,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "kube_deployment_status_replicas_available{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",deployment=\"hasura\"}",
+                "expr": "kube_deployment_status_replicas_available{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",deployment=\"${APP_CHAIN_INDEXER_HASURA_SVC}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -939,7 +939,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"hasura\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"${APP_CHAIN_INDEXER_HASURA_SVC}\"}",
                 "queryType": "range"
               }
             ],
@@ -1107,7 +1107,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"}[5m]))",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"${APP_CHAIN_INDEXER_DB_NAME}\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1117,7 +1117,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"}[5m]))",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"${APP_CHAIN_INDEXER_DB_NAME}\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1229,7 +1229,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "max(cnpg_pg_database_size_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"})",
+                "expr": "max(cnpg_pg_database_size_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"${APP_CHAIN_INDEXER_DB_NAME}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1365,7 +1365,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", pg_cluster=\"postgres\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", pg_cluster=\"${APP_CHAIN_INDEXER_PG_CLUSTER}\"}",
                 "queryType": "range"
               }
             ],
