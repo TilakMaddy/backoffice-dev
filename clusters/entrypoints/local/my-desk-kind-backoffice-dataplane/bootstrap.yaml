@@ -15,7 +15,7 @@ data:
   OP_VAULT_RESEND_SMTP_PASSWORD: Resend/password
   GRAFANA_SMTP_HOST: smtp.resend.com:587
   GRAFANA_SMTP_USER: resend
-  GRAFANA_SMTP_FROM_ADDRESS: alerts@oatmilk.work
+  GRAFANA_SMTP_FROM_ADDRESS: alerts@backoffice.oatmilk.work
   ALERT_EMAIL_TO: tilak.madichetti@gmail.com
   GRAFANA_ADMIN_USER: admin
   GRAFANA_ADMIN_PASSWORD: pass123
