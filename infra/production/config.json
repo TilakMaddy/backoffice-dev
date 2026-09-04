@@ -18,6 +18,18 @@
           "root_volume_size": 30,
           "monitoring": false,
           "availability_zone": "us-west-2a"
+        },
+        "node-1": {
+          "instance_type": "c7i-flex.large",
+          "root_volume_size": 30,
+          "monitoring": false,
+          "availability_zone": "us-west-2b"
+        },
+        "node-2": {
+          "instance_type": "c7i-flex.large",
+          "root_volume_size": 30,
+          "monitoring": false,
+          "availability_zone": "us-west-2c"
         }
       },
       "k8s_workers": {
