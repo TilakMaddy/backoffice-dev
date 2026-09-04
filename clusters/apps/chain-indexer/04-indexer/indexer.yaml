@@ -51,6 +51,12 @@ metadata:
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
     app: indexer
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    keel.sh/policy: "${INDEXER_KEEL_POLICY}"
+    keel.sh/trigger: "${INDEXER_KEEL_TRIGGER}"
+    keel.sh/matchTag: "true"
+    keel.sh/pollSchedule: "${INDEXER_KEEL_POLL_SCHEDULE}"
 spec:
   serviceName: indexer
   replicas: 1 # never raise this
@@ -98,7 +104,7 @@ spec:
       containers:
         - name: indexer
           image: ${INDEXER_IMAGE_NAME}
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: ${INDEXER_IMAGE_PULL_POLICY}
           env:
             # --- Postgres: the indexer creates and owns its own tables here ---
             - name: ENVIO_PG_HOST
