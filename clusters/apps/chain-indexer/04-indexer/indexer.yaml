@@ -106,6 +106,13 @@ spec:
           image: ${INDEXER_IMAGE_NAME}
           imagePullPolicy: ${INDEXER_IMAGE_PULL_POLICY}
           env:
+            - name: LOG_LEVEL
+              value: trace
+            - name: LOG_STRATEGY
+              value: ecs-console
+            - name: ENVIO_TUI
+              value: false
+
             # --- Postgres: the indexer creates and owns its own tables here ---
             - name: ENVIO_PG_HOST
               value: ${APP_CHAIN_INDEXER_PG_CLUSTER}-rw.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local
@@ -117,6 +124,7 @@ spec:
               value: ${APP_CHAIN_INDEXER_DB_SCHEMA}
             - name: ENVIO_PG_SSL_MODE
               value: require
+
             # Same role Hasura connects as, so Hasura owns what it reads.
             - name: ENVIO_PG_USER
               valueFrom:
@@ -151,8 +159,6 @@ spec:
 
             - name: ENVIO_INDEXER_PORT
               value: "9898"
-            - name: LOG_STRATEGY
-              value: console-raw
           ports:
             - name: metrics
               containerPort: 9898
