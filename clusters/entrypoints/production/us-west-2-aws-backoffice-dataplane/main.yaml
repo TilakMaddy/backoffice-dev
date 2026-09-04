@@ -10,7 +10,7 @@ data:
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
   OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
-  INDEXER_IMAGE_NAME: chain-indexer:production
+  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force
   INDEXER_KEEL_TRIGGER: manual

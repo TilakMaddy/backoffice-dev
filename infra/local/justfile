@@ -8,5 +8,7 @@ down:
     docker compose -f cloud-provider-kind.yaml down
     kind delete cluster --name local-platform
 
-load-indexer tag="0.0.1":
-    kind load docker-image chain-indexer:{{ tag }} --name local-platform
+reload-indexer tag="local":
+    kind load docker-image my-envio-indexer:{{ tag }} --name local-platform
+    kubectl rollout restart statefulset/indexer -n chain-indexer
+    kubectl rollout status statefulset/indexer -n chain-indexer
