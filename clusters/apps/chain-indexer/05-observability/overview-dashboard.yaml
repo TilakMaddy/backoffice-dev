@@ -1,0 +1,1325 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: chain-indexer-overview
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  folderRef: chain-indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 5m
+  json: |
+      {
+        "uid": "chain-indexer-overview",
+        "title": "Chain Indexer Overview",
+        "description": "Metrics and logs for the Envio indexer, Hasura and the CloudNativePG cluster backing them.",
+        "tags": [
+          "chain-indexer"
+        ],
+        "editable": true,
+        "schemaVersion": 39,
+        "version": 1,
+        "refresh": "30s",
+        "time": {
+          "from": "now-6h",
+          "to": "now"
+        },
+        "timezone": "browser",
+        "timepicker": {},
+        "templating": {
+          "list": []
+        },
+        "annotations": {
+          "list": []
+        },
+        "panels": [
+          {
+            "id": 1,
+            "type": "row",
+            "title": "Indexer",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 0,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 2,
+            "type": "stat",
+            "title": "Sync state",
+            "description": "envio_progress_ready: 1 when the chain is fully synced to head. Minimum across chains.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "min(envio_progress_ready{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "SYNCING",
+                        "color": "orange",
+                        "index": 1
+                      },
+                      "1": {
+                        "text": "SYNCED",
+                        "color": "green",
+                        "index": 0
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 3,
+            "type": "stat",
+            "title": "Restarts",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"chain-indexer\",container=\"indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 5
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 4,
+            "type": "timeseries",
+            "title": "Blocks behind head",
+            "description": "known_height - progress_block. The single best indicator that the indexer is falling behind.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 1,
+              "w": 8,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"} - envio_progress_block{namespace=\"chain-indexer\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 5,
+            "type": "timeseries",
+            "title": "Write latency",
+            "description": "Milliseconds between event creation on chain and the write landing in Postgres.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 1,
+              "w": 8,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_progress_latency{namespace=\"chain-indexer\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "mean",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ms",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 6,
+            "type": "timeseries",
+            "title": "Block height",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 5,
+              "w": 8,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_progress_block{namespace=\"chain-indexer\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "processed {{chainId}}"
+              },
+              {
+                "refId": "B",
+                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "head {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 7,
+            "type": "timeseries",
+            "title": "Events/sec",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 5,
+              "w": 8,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(envio_progress_events{namespace=\"chain-indexer\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 8,
+            "type": "timeseries",
+            "title": "CPU / memory",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 5,
+              "w": 8,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"chain-indexer\",container=\"indexer\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "cpu cores"
+              },
+              {
+                "refId": "B",
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"chain-indexer\",container=\"indexer\"}) / 1024 / 1024 / 1024",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "memory GiB"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 9,
+            "type": "timeseries",
+            "title": "Reorgs & rollbacks",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 10,
+              "w": 8,
+              "h": 6
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "increase(envio_reorg_detected_total{namespace=\"chain-indexer\"}[1h])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "reorgs/h {{chainId}}"
+              },
+              {
+                "refId": "B",
+                "expr": "increase(envio_rollback_total{namespace=\"chain-indexer\"}[1h])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "rollbacks/h {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 10,
+            "type": "logs",
+            "title": "Indexer logs",
+            "description": "",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 10,
+              "w": 16,
+              "h": 6
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "datasource": {
+                  "type": "loki",
+                  "uid": "loki"
+                },
+                "expr": "{namespace=\"chain-indexer\", app=\"indexer\"}",
+                "queryType": "range"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "showLabels": false,
+              "wrapLogMessage": true,
+              "prettifyLogMessage": false,
+              "sortOrder": "Descending",
+              "enableLogDetails": true,
+              "dedupStrategy": "none"
+            }
+          },
+          {
+            "id": 11,
+            "type": "row",
+            "title": "Hasura",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 16,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 12,
+            "type": "timeseries",
+            "title": "Requests/sec",
+            "description": "Measured at the Envoy Gateway; Hasura CE exposes no Prometheus endpoint.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 17,
+              "w": 8,
+              "h": 6
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(envoy_cluster_upstream_rq_total{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "rps"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "mean",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 13,
+            "type": "timeseries",
+            "title": "Responses by class",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 17,
+              "w": 8,
+              "h": 6
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum by (envoy_response_code_class) (rate(envoy_cluster_upstream_rq_xx{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "{{envoy_response_code_class}}xx"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "normal",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 14,
+            "type": "timeseries",
+            "title": "Upstream latency",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 17,
+              "w": 8,
+              "h": 6
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "histogram_quantile(0.50, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "p50"
+              },
+              {
+                "refId": "B",
+                "expr": "histogram_quantile(0.95, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "p95"
+              },
+              {
+                "refId": "C",
+                "expr": "histogram_quantile(0.99, sum by (le) (rate(envoy_cluster_upstream_rq_time_bucket{envoy_cluster_name=~\"httproute/chain-indexer/chain-indexer-graphql-route.*\"}[5m])))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "p99"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ms",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 15,
+            "type": "stat",
+            "title": "Replicas available",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 23,
+              "w": 4,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "kube_deployment_status_replicas_available{namespace=\"chain-indexer\",deployment=\"hasura\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    },
+                    {
+                      "color": "green",
+                      "value": 2
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 16,
+            "type": "logs",
+            "title": "Hasura logs",
+            "description": "",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 23,
+              "w": 20,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "datasource": {
+                  "type": "loki",
+                  "uid": "loki"
+                },
+                "expr": "{namespace=\"chain-indexer\", app=\"hasura\"}",
+                "queryType": "range"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "showLabels": false,
+              "wrapLogMessage": true,
+              "prettifyLogMessage": false,
+              "sortOrder": "Descending",
+              "enableLogDetails": true,
+              "dedupStrategy": "none"
+            }
+          },
+          {
+            "id": 17,
+            "type": "row",
+            "title": "Postgres",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 30,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 18,
+            "type": "stat",
+            "title": "Instances up",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 31,
+              "w": 4,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "count(cnpg_collector_up{namespace=\"chain-indexer\"} == 1)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 2
+                    },
+                    {
+                      "color": "green",
+                      "value": 3
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 19,
+            "type": "timeseries",
+            "title": "Connections",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 31,
+              "w": 5,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(cnpg_backends_total{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "backends"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 20,
+            "type": "timeseries",
+            "title": "Transactions/sec",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 9,
+              "y": 31,
+              "w": 5,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"chain-indexer\",datname=\"indexer-db\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "commit"
+              },
+              {
+                "refId": "B",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"chain-indexer\",datname=\"indexer-db\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "rollback"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 21,
+            "type": "timeseries",
+            "title": "Replication lag",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 14,
+              "y": 31,
+              "w": 5,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(cnpg_pg_replication_lag{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "lag"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 22,
+            "type": "timeseries",
+            "title": "Database size",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 19,
+              "y": 31,
+              "w": 5,
+              "h": 5
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(cnpg_pg_database_size_bytes{namespace=\"chain-indexer\",datname=\"indexer-db\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "indexer-db"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "bytes",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 23,
+            "type": "timeseries",
+            "title": "pgbouncer clients",
+            "description": "",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 36,
+              "w": 8,
+              "h": 8
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(cnpg_pgbouncer_pools_cl_active{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "active"
+              },
+              {
+                "refId": "B",
+                "expr": "sum(cnpg_pgbouncer_pools_cl_waiting{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "waiting"
+              },
+              {
+                "refId": "C",
+                "expr": "sum(cnpg_pgbouncer_pools_sv_active{namespace=\"chain-indexer\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "legendFormat": "server active"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": []
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 24,
+            "type": "logs",
+            "title": "Postgres logs",
+            "description": "",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 36,
+              "w": 16,
+              "h": 8
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "datasource": {
+                  "type": "loki",
+                  "uid": "loki"
+                },
+                "expr": "{namespace=\"chain-indexer\", pg_cluster=\"postgres\"}",
+                "queryType": "range"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "showLabels": false,
+              "wrapLogMessage": true,
+              "prettifyLogMessage": false,
+              "sortOrder": "Descending",
+              "enableLogDetails": true,
+              "dedupStrategy": "none"
+            }
+          }
+        ]
+      }

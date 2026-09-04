@@ -50,6 +50,7 @@ spec:
   wait: true
   dependsOn:
     - name: common
+    - name: observability-operators
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -61,4 +62,31 @@ spec:
         name: cluster-vars
       - kind: ConfigMap
         name: chain-indexer-vars
+
 ---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
+  path: ./clusters/packages/layer-zero/platform/observability
+  prune: true
+  wait: true
+  dependsOn:
+    - name: bootstrap
+  sourceRef:
+    kind: GitRepository
+    name: platform-foundation
+  postBuild:
+    substitute:
+      CLUSTER_CONFIG: platform-vars
+      PLATFORM_SOURCE: platform-foundation
+      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+      PLATFORM_NAMESPACE: platform-system
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars

@@ -10,6 +10,9 @@ spec:
   instances: ${PG_POOLER_INSTANCES}
   type: rw
 
+  monitoring:
+    enablePodMonitor: true
+
   template:
     spec:
       containers:

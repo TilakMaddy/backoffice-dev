@@ -8,6 +8,9 @@ spec:
 
   enableSuperuserAccess: true
 
+  monitoring:
+    enablePodMonitor: true
+
   resources:
     requests:
       memory: "512Mi"

@@ -74,6 +74,21 @@
           "roles": [
             "postgres"
           ]
+        },
+        "node-4": {
+          "instance_type": "c7i-flex.xlarge",
+          "root_volume_size": 50,
+          "monitoring": false,
+          "availability_zone": "us-west-2a",
+          "registration_taints": [
+            {
+              "key": "node-role.kubernetes.io/observability",
+              "effect": "NoSchedule"
+            }
+          ],
+          "roles": [
+            "observability"
+          ]
         }
       }
     }

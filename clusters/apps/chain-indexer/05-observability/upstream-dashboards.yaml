@@ -1,0 +1,65 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: cnpg-cluster
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  folderRef: chain-indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 30m
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: Prometheus
+  url: https://raw.githubusercontent.com/cloudnative-pg/grafana-dashboards/main/charts/cluster/grafana-dashboard.json
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: envoy-clusters
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  folderRef: chain-indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 30m
+  url: https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.0/charts/gateway-addons-helm/dashboards/envoy-clusters.json
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: envoy-proxy-global
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  folderRef: chain-indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 30m
+  url: https://raw.githubusercontent.com/envoyproxy/gateway/v1.9.0/charts/gateway-addons-helm/dashboards/envoy-proxy-global.json
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDashboard
+metadata:
+  name: node-exporter-full
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  folderRef: chain-indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 30m
+  datasources:
+    - inputName: DS_PROMETHEUS
+      datasourceName: Prometheus
+  grafanaCom:
+    id: 1860

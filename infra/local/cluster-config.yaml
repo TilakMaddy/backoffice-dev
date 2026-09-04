@@ -65,3 +65,16 @@ nodes:
         taints:
           - key: node-role.kubernetes.io/postgres
             effect: NoSchedule
+
+- role: worker
+  labels:
+    k8s-labels.oatmilk.work/node-purpose: observability
+    topology.kubernetes.io/region: my-desk
+    topology.kubernetes.io/zone: my-desk-a
+  kubeadmConfigPatches:
+    - |
+      kind: JoinConfiguration
+      nodeRegistration:
+        taints:
+          - key: node-role.kubernetes.io/observability
+            effect: NoSchedule
