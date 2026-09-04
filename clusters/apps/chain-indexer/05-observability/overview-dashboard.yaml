@@ -4,7 +4,7 @@ metadata:
   name: chain-indexer-overview
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -139,7 +139,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"})",
+                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"${APP_CHAIN_INDEXER_SVC}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -500,7 +500,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"}[5m]))",
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"${APP_CHAIN_INDEXER_SVC}\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -510,7 +510,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"}) / 1024 / 1024 / 1024",
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"${APP_CHAIN_INDEXER_SVC}\"}) / 1024 / 1024 / 1024",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -637,7 +637,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"${APP_CHAIN_INDEXER_SVC}\"}",
                 "queryType": "range"
               }
             ],

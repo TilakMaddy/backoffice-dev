@@ -4,7 +4,7 @@ metadata:
   name: cnpg-cluster
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -22,7 +22,7 @@ metadata:
   name: envoy-clusters
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -37,7 +37,7 @@ metadata:
   name: envoy-proxy-global
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -52,7 +52,7 @@ metadata:
   name: node-exporter-full
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana

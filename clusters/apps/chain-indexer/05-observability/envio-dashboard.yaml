@@ -4,7 +4,7 @@ metadata:
   name: envio-indexer
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -742,7 +742,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "min(up{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "expr": "min(up{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -873,7 +873,7 @@ spec:
               "sortOrder": 3,
               "dashboardAlerts": false,
               "alertName": "",
-              "alertInstanceLabelFilter": "{app=\"chain-indexer\"}",
+              "alertInstanceLabelFilter": "{app=\"${APP_CHAIN_INDEXER_ALERT_APP}\"}",
               "folder": "",
               "showInstances": true,
               "stateFilter": {
@@ -1658,7 +1658,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "sum(count_over_time({namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"} |= \"rate-limited\" [$__interval]))",
+                "expr": "sum(count_over_time({namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"${APP_CHAIN_INDEXER_SVC}\"} |= \"rate-limited\" [$__interval]))",
                 "legendFormat": "rate-limited"
               }
             ],
@@ -2782,7 +2782,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "nodejs_eventloop_lag_p50_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_eventloop_lag_p50_seconds{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2791,7 +2791,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "nodejs_eventloop_lag_p90_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_eventloop_lag_p90_seconds{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2800,7 +2800,7 @@ spec:
               },
               {
                 "refId": "C",
-                "expr": "nodejs_eventloop_lag_p99_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_eventloop_lag_p99_seconds{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2809,7 +2809,7 @@ spec:
               },
               {
                 "refId": "D",
-                "expr": "nodejs_eventloop_lag_max_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_eventloop_lag_max_seconds{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2866,7 +2866,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "nodejs_eventloop_utilization{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_eventloop_utilization{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2925,7 +2925,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "rate(nodejs_gc_duration_seconds_sum{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]) / clamp_min(rate(nodejs_gc_duration_seconds_count{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), 0.0001)",
+                "expr": "rate(nodejs_gc_duration_seconds_sum{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]) / clamp_min(rate(nodejs_gc_duration_seconds_count{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), 0.0001)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2982,7 +2982,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "nodejs_heap_size_used_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_heap_size_used_bytes{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -2991,7 +2991,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "nodejs_heap_size_total_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "nodejs_heap_size_total_bytes{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -3000,7 +3000,7 @@ spec:
               },
               {
                 "refId": "C",
-                "expr": "process_resident_memory_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "expr": "process_resident_memory_bytes{job=\"${APP_CHAIN_INDEXER_SVC}\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -3057,7 +3057,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"indexer\"}[5m]))",
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"${APP_CHAIN_INDEXER_SVC}\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -3066,7 +3066,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"indexer\"}) / 1024 / 1024 / 1024",
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"${APP_CHAIN_INDEXER_SVC}\"}) / 1024 / 1024 / 1024",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -3139,7 +3139,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"} | json | log_level=~\"error|warn|fatal\"",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"${APP_CHAIN_INDEXER_SVC}\"} | json | log_level=~\"error|warn|fatal\"",
                 "queryType": "range"
               }
             ],
@@ -3174,7 +3174,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"${APP_CHAIN_INDEXER_SVC}\"}",
                 "queryType": "range"
               }
             ],

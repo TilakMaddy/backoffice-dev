@@ -1,12 +1,12 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: indexer
+  name: ${APP_CHAIN_INDEXER_SVC}
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   selector:
     matchLabels:
-      app: indexer
+      app: ${APP_CHAIN_INDEXER_SVC}
   endpoints:
     - port: metrics
       path: /metrics

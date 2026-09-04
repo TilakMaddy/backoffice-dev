@@ -11,14 +11,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: indexer
+  name: ${APP_CHAIN_INDEXER_SVC}
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
-    app: indexer
+    app: ${APP_CHAIN_INDEXER_SVC}
 spec:
   clusterIP: None # headless; required by the StatefulSet's serviceName
   selector:
-    app: indexer
+    app: ${APP_CHAIN_INDEXER_SVC}
   ports:
     - name: metrics
       port: 9898
@@ -47,10 +47,10 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: indexer
+  name: ${APP_CHAIN_INDEXER_SVC}
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
-    app: indexer
+    app: ${APP_CHAIN_INDEXER_SVC}
   annotations:
     kustomize.toolkit.fluxcd.io/ssa: Merge
     keel.sh/policy: "${INDEXER_KEEL_POLICY}"
@@ -58,15 +58,15 @@ metadata:
     keel.sh/matchTag: "true"
     keel.sh/pollSchedule: "@every ${INDEXER_KEEL_POLL_INTERVAL}"
 spec:
-  serviceName: indexer
+  serviceName: ${APP_CHAIN_INDEXER_SVC}
   replicas: 1 # never raise this
   selector:
     matchLabels:
-      app: indexer
+      app: ${APP_CHAIN_INDEXER_SVC}
   template:
     metadata:
       labels:
-        app: indexer
+        app: ${APP_CHAIN_INDEXER_SVC}
     spec:
       terminationGracePeriodSeconds: 30
       nodeSelector:
@@ -102,7 +102,7 @@ spec:
               drop: ["ALL"]
 
       containers:
-        - name: indexer
+        - name: ${APP_CHAIN_INDEXER_SVC}
           image: ${INDEXER_IMAGE_NAME}
           imagePullPolicy: ${INDEXER_IMAGE_PULL_POLICY}
           env:

@@ -4,7 +4,7 @@ metadata:
   name: envio-indexer
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  folderRef: chain-indexer
+  folderRef: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
   instanceSelector:
     matchLabels:
       dashboards: grafana
@@ -20,7 +20,7 @@ spec:
       noDataState: Alerting
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer has not advanced a block in 10 minutes while not synced to head
         runbook: Check indexer logs and the Bottleneck panel on the Envio Indexer dashboard.
@@ -59,7 +59,7 @@ spec:
       noDataState: Alerting
       labels:
         severity: critical
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: No healthy Hasura upstreams behind the GraphQL route
       data:
@@ -97,7 +97,7 @@ spec:
       noDataState: OK
       labels:
         severity: info
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer process restarted
       data:
@@ -135,7 +135,7 @@ spec:
       noDataState: OK
       labels:
         severity: info
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer emitted error or fatal log lines in the last 5 minutes
       data:
@@ -149,7 +149,7 @@ spec:
             datasource:
               type: loki
               uid: loki
-            expr: sum(count_over_time({namespace="${APP_CHAIN_INDEXER_NAMESPACE}", app="indexer"} | json | log_level=~"error|fatal" [5m]))
+            expr: sum(count_over_time({namespace="${APP_CHAIN_INDEXER_NAMESPACE}", app="${APP_CHAIN_INDEXER_SVC}"} | json | log_level=~"error|fatal" [5m]))
             queryType: instant
         - refId: B
           datasourceUid: __expr__
@@ -173,7 +173,7 @@ spec:
       noDataState: OK
       labels:
         severity: info
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer finished historical sync and reached the chain head
       data:
@@ -211,7 +211,7 @@ spec:
       noDataState: Alerting
       labels:
         severity: critical
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Prometheus cannot scrape the indexer
       data:
@@ -225,7 +225,7 @@ spec:
             datasource:
               type: prometheus
               uid: prometheus
-            expr: up{job="indexer", namespace="${APP_CHAIN_INDEXER_NAMESPACE}"}
+            expr: up{job="${APP_CHAIN_INDEXER_SVC}", namespace="${APP_CHAIN_INDEXER_NAMESPACE}"}
             instant: true
         - refId: B
           datasourceUid: __expr__
@@ -249,7 +249,7 @@ spec:
       noDataState: Alerting
       labels:
         severity: critical
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer metric snapshot is more than 2 minutes old
       data:
@@ -287,7 +287,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer restarted more than twice in the last hour
       data:
@@ -325,7 +325,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Indexer is more than 5000 blocks behind the chain head
       data:
@@ -363,7 +363,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: More than 5 minutes between event creation on chain and the write landing in Postgres
       data:
@@ -401,7 +401,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Processing is paused waiting on Postgres writes for more than 30 percent of wall clock
       data:
@@ -439,7 +439,7 @@ spec:
       noDataState: OK
       labels:
         severity: info
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Processing is stalled waiting on the data source for more than half of wall clock
         runbook: Usually HyperSync rate limiting. Check envio_source_request_seconds_total by method.
@@ -478,7 +478,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: A chain reorganisation was detected in the last 15 minutes
       data:
@@ -516,7 +516,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: GraphQL route is returning server errors
       data:
@@ -554,7 +554,7 @@ spec:
       noDataState: OK
       labels:
         severity: warning
-        app: chain-indexer
+        app: ${APP_CHAIN_INDEXER_ALERT_APP}
       annotations:
         summary: Node.js event loop p99 lag above 1s, a handler is blocking the loop
       data:
@@ -568,7 +568,7 @@ spec:
             datasource:
               type: prometheus
               uid: prometheus
-            expr: max(nodejs_eventloop_lag_p99_seconds{job="indexer", namespace="${APP_CHAIN_INDEXER_NAMESPACE}"})
+            expr: max(nodejs_eventloop_lag_p99_seconds{job="${APP_CHAIN_INDEXER_SVC}", namespace="${APP_CHAIN_INDEXER_NAMESPACE}"})
             instant: true
         - refId: B
           datasourceUid: __expr__
