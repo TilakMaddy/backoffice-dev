@@ -97,7 +97,7 @@ spec:
 
       containers:
         - name: indexer
-          image: chain-indexer:0.0.1
+          image: ${INDEXER_IMAGE_NAME}
           imagePullPolicy: IfNotPresent
           env:
             # --- Postgres: the indexer creates and owns its own tables here ---
