@@ -12,6 +12,9 @@ data:
   OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
   OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
   OP_VAULT_GHCR_TOKEN: GHCR/e6wg2mswa77c44e76spqs6tp6q # pull_token
+  FLUX_INTERVAL: 2m0s
+  FLUX_RETRY_INTERVAL: 30s
+  FLUX_TIMEOUT: 3m0s
   ENVOY_REPLICAS: "3"
   SHIM_REPLICAS: "3"
 
@@ -37,7 +40,9 @@ metadata:
   name: bootstrap
   namespace: flux-system
 spec:
-  interval: 10m0s
+  interval: 2m0s
+  retryInterval: 30s
+  timeout: 3m0s
   path: ./clusters/packages/layer-zero/platform/bootstrap
   prune: true
   wait: true
@@ -50,3 +55,6 @@ spec:
       PLATFORM_SOURCE: platform-foundation
       PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
       PLATFORM_NAMESPACE: platform-system
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars

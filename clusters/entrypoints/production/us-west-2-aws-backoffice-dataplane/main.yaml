@@ -18,7 +18,9 @@ metadata:
   name: common
   namespace: flux-system
 spec:
-  interval: 10m0s
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
   path: ./clusters/common
   prune: true
   wait: true
@@ -35,7 +37,9 @@ metadata:
   name: apps
   namespace: flux-system
 spec:
-  interval: 10m0s
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
   path: ./clusters/apps
   prune: true
   wait: true

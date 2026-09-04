@@ -6,7 +6,7 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 1m0s
+  interval: 30s
   ref:
     branch: tilak/feat/add-hasura
   secretRef:
@@ -19,7 +19,8 @@ metadata:
   name: flux-system
   namespace: flux-system
 spec:
-  interval: 10m0s
+  interval: 30s
+  retryInterval: 15s
   path: ./clusters/entrypoints/local/my-desk-kind-backoffice-dataplane
   prune: true
   sourceRef:
