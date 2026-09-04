@@ -6,8 +6,8 @@ metadata:
 data:
   APP_CHAIN_INDEXER_NAMESPACE: chain-indexer
 
-  APP_CHAIN_INDEXER_PG_CLUSTER: chain-indexer
-  APP_CHAIN_INDEXER_PG_POOLER: chain-indexer-edge
+  APP_CHAIN_INDEXER_PG_CLUSTER: postgres
+  APP_CHAIN_INDEXER_PG_POOLER: postgres-edge
 
   APP_CHAIN_INDEXER_PG_CATALOG: chain-indexer-postgresql-minimal-trixie
   APP_CHAIN_INDEXER_PG_MAJOR: "18"
