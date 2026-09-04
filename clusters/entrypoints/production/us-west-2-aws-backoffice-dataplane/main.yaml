@@ -14,7 +14,7 @@ data:
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force
   INDEXER_KEEL_TRIGGER: manual
-  INDEXER_KEEL_POLL_SCHEDULE: "@every 1m"
+  INDEXER_KEEL_POLL_INTERVAL: 1m
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
