@@ -57,7 +57,7 @@ spec:
         "annotations": {
           "list": [
             {
-              "name": "Indexer restarts",
+              "name": "Show indexer restarts",
               "datasource": {
                 "type": "prometheus",
                 "uid": "prometheus"
@@ -1680,7 +1680,7 @@ spec:
             "id": 30,
             "type": "table",
             "title": "Handler leaderboard",
-            "description": "Per contract and event: call rate and mean duration. Sort by avg duration to find the slow handler.",
+            "description": "Per contract and event, summed across all chains. Envio does not label handler metrics with chainId, so the Chain selector does not filter this panel. processed is the cumulative handler execution count and matches the row count in Postgres.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
@@ -1724,6 +1724,17 @@ spec:
                 "instant": true,
                 "range": false,
                 "format": "table"
+              },
+              {
+                "refId": "D",
+                "expr": "sum by (contract, event) (envio_processing_handler_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false,
+                "format": "table"
               }
             ],
             "transformations": [
@@ -1741,12 +1752,23 @@ spec:
                     "Time 1": true,
                     "Time 2": true,
                     "Time 3": true,
+                    "Time 4": true,
                     "contract 2": true,
-                    "contract 3": true
+                    "contract 3": true,
+                    "contract 4": true
+                  },
+                  "indexByName": {
+                    "contract 1": 0,
+                    "event": 1,
+                    "Value #D": 2,
+                    "Value #A": 3,
+                    "Value #B": 4,
+                    "Value #C": 5
                   },
                   "renameByName": {
                     "contract 1": "contract",
                     "event": "event",
+                    "Value #D": "processed",
                     "Value #A": "calls/sec",
                     "Value #B": "avg duration",
                     "Value #C": "preload sec/sec"
@@ -1759,7 +1781,7 @@ spec:
                   "fields": {},
                   "sort": [
                     {
-                      "field": "avg duration",
+                      "field": "processed",
                       "desc": true
                     }
                   ]
@@ -1823,6 +1845,22 @@ spec:
                     {
                       "id": "unit",
                       "value": "ops"
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "processed"
+                  },
+                  "properties": [
+                    {
+                      "id": "unit",
+                      "value": "short"
+                    },
+                    {
+                      "id": "decimals",
+                      "value": 0
                     }
                   ]
                 }
