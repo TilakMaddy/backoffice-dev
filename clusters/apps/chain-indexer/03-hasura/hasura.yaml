@@ -46,7 +46,7 @@ spec:
                 path: ca.crt
       containers:
         - name: hasura
-          image: hasura/graphql-engine:v2.50.1@sha256:5060c6b61db91fbc841394dbd8821bf76bd61f20a9ad3abf8bd6ecdcc06b1852
+          image: hasura/graphql-engine:v2.50.1
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:

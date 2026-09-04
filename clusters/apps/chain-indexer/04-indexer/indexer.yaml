@@ -65,6 +65,31 @@ spec:
       terminationGracePeriodSeconds: 30
       nodeSelector:
         node-role.kubernetes.io/general: ""
+      initContainers:
+        - name: wait-for-hasura
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf http://hasura.chain-indexer.svc.cluster.local:8080/healthz; do
+                echo "waiting for hasura..."
+                sleep 2
+              done
+              echo "hasura is ready"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+
       containers:
         - name: indexer
           image: chain-indexer:0.0.1
