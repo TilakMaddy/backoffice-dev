@@ -14,7 +14,7 @@ spec:
       {
         "uid": "envio-indexer",
         "title": "Envio Indexer",
-        "description": "Envio HyperIndex internals: sync progress, fetching, handler processing, storage and reorgs.",
+        "description": "Envio HyperIndex operations: health, where the wall clock goes, sync progress, fetching, handlers, storage, reorgs and Node.js runtime.",
         "tags": [
           "chain-indexer",
           "envio"
@@ -30,16 +30,52 @@ spec:
         "timezone": "browser",
         "timepicker": {},
         "templating": {
-          "list": []
+          "list": [
+            {
+              "name": "chain",
+              "label": "Chain",
+              "type": "query",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "query": "label_values(envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}, chainId)",
+              "refresh": 1,
+              "sort": 1,
+              "multi": true,
+              "includeAll": true,
+              "current": {
+                "text": "All",
+                "value": "$__all",
+                "selected": true
+              },
+              "options": [],
+              "hide": 0
+            }
+          ]
         },
         "annotations": {
-          "list": []
+          "list": [
+            {
+              "name": "Indexer restarts",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "enable": true,
+              "hide": false,
+              "iconColor": "orange",
+              "expr": "changes(envio_process_start_time_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[$__interval]) > 0",
+              "titleFormat": "Indexer restart",
+              "step": "60s"
+            }
+          ]
         },
         "panels": [
           {
             "id": 1,
             "type": "row",
-            "title": "Sync",
+            "title": "Health",
             "collapsed": false,
             "gridPos": {
               "x": 0,
@@ -52,8 +88,8 @@ spec:
           {
             "id": 2,
             "type": "stat",
-            "title": "Sync state",
-            "description": "envio_progress_ready = 1 when the chain is fully synced to head.",
+            "title": "Indexing",
+            "description": "Whether the indexer advanced a block in the last 10 minutes.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
@@ -62,12 +98,12 @@ spec:
               "x": 0,
               "y": 1,
               "w": 4,
-              "h": 5
+              "h": 4
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "min(envio_progress_ready{namespace=\"chain-indexer\"})",
+                "expr": "(increase(envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[10m]) > bool 0)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -86,7 +122,81 @@ spec:
               },
               "colorMode": "background",
               "graphMode": "none",
-              "textMode": "auto"
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "STALLED",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "INDEXING",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 3,
+            "type": "stat",
+            "title": "Sync state",
+            "description": "envio_progress_ready = 1 when the chain is fully synced to head.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "min(envio_progress_ready{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
             },
             "fieldConfig": {
               "defaults": {
@@ -122,24 +232,844 @@ spec:
             }
           },
           {
-            "id": 3,
-            "type": "timeseries",
-            "title": "Blocks behind head",
+            "id": 4,
+            "type": "stat",
+            "title": "Bottleneck",
+            "description": "Whichever of fetch / storage / handlers / at-head is consuming the most wall clock right now.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "label_replace(topk(1, label_replace(rate(envio_processing_stalled_on_fetch_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), \"cause\", \"FETCH\", \"\", \"\") or label_replace(rate(envio_processing_stalled_on_storage_write_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), \"cause\", \"STORAGE\", \"\", \"\") or label_replace(rate(envio_processing_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), \"cause\", \"HANDLERS\", \"\", \"\") or label_replace(rate(envio_indexing_source_waiting_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), \"cause\", \"AT-HEAD\", \"\", \"\")), \"name\", \"$1\", \"cause\", \"(.*)\")",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{cause}}",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "name",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 5,
+            "type": "stat",
+            "title": "Blocks behind",
             "description": "known_height - progress_block. The primary 'is it keeping up' signal.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 4,
+              "x": 12,
               "y": 1,
-              "w": 10,
-              "h": 5
+              "w": 4,
+              "h": 4
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"} - envio_progress_block{namespace=\"chain-indexer\"}",
+                "expr": "envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"} - envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1000
+                    },
+                    {
+                      "color": "red",
+                      "value": 5000
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 6,
+            "type": "stat",
+            "title": "ETA to head",
+            "description": "Blocks remaining divided by current block rate.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "(envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"} - envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}) / clamp_min(rate(envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]), 0.001)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 600
+                    },
+                    {
+                      "color": "red",
+                      "value": 3600
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 7,
+            "type": "stat",
+            "title": "Total events",
+            "description": "Cumulative events processed and reflected in the database.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 20,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(envio_progress_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 8,
+            "type": "stat",
+            "title": "Events/sec",
+            "description": "Event throughput.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(envio_progress_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "area",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                },
+                "decimals": 1
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 9,
+            "type": "stat",
+            "title": "Write latency",
+            "description": "Event creation on chain to write landing in Postgres. Reported in milliseconds.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(envio_progress_latency{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ms",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 60000
+                    },
+                    {
+                      "color": "red",
+                      "value": 300000
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 10,
+            "type": "stat",
+            "title": "Uptime",
+            "description": "How long the indexer process has been running.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(envio_process_elapsed_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 11,
+            "type": "stat",
+            "title": "Restarts (1h)",
+            "description": "Self-reported process restarts. Catches in-process restarts a pod restart count misses.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(changes(envio_process_start_time_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 1
+                    },
+                    {
+                      "color": "red",
+                      "value": 3
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 12,
+            "type": "stat",
+            "title": "Scrape target",
+            "description": "Whether Prometheus can reach the indexer /metrics endpoint.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "min(up{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DOWN",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "UP",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 13,
+            "type": "stat",
+            "title": "Version",
+            "description": "Running HyperIndex version.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 20,
+              "y": 5,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_info{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{version}}",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "name",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 14,
+            "type": "row",
+            "title": "Time budget",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 9,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 15,
+            "type": "timeseries",
+            "title": "Where the wall clock goes",
+            "description": "Each series is seconds-per-second, so the stack is the share of wall clock spent in each state. The tallest band is the bottleneck.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 10,
+              "w": 24,
+              "h": 8
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(envio_processing_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "handlers"
+              },
+              {
+                "refId": "B",
+                "expr": "rate(envio_preload_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "preload"
+              },
+              {
+                "refId": "C",
+                "expr": "rate(envio_processing_stalled_on_fetch_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "stalled: fetch"
+              },
+              {
+                "refId": "D",
+                "expr": "rate(envio_processing_stalled_on_storage_write_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "stalled: storage"
+              },
+              {
+                "refId": "E",
+                "expr": "sum(rate(envio_indexing_source_waiting_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "waiting at head"
+              },
+              {
+                "refId": "F",
+                "expr": "sum(rate(envio_indexing_idle_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "idle"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "mean"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 40,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "normal",
+                    "group": "A"
+                  }
+                },
+                "min": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 16,
+            "type": "row",
+            "title": "Progress",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 18,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 17,
+            "type": "timeseries",
+            "title": "Block height",
+            "description": "Processed block versus the head reported by the source.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 19,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "processed chain {{chainId}}"
+              },
+              {
+                "refId": "B",
+                "expr": "envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "known head chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 18,
+            "type": "timeseries",
+            "title": "Blocks behind head",
+            "description": "The primary 'is it keeping up' signal.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 19,
+              "w": 6,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"} - envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -179,24 +1109,24 @@ spec:
             }
           },
           {
-            "id": 4,
+            "id": 19,
             "type": "timeseries",
-            "title": "Write latency",
-            "description": "Milliseconds from event creation on chain to the write landing in Postgres.",
+            "title": "Buffer saturation",
+            "description": "Items in the indexing buffer as a share of the indexer-wide target buffer size.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 14,
-              "y": 1,
-              "w": 10,
-              "h": 5
+              "x": 18,
+              "y": 19,
+              "w": 6,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_progress_latency{namespace=\"chain-indexer\"}",
+                "expr": "100 * envio_indexing_buffer_size{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"} / on() group_left() envio_indexing_target_buffer_size{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -210,7 +1140,131 @@ spec:
                 "placement": "bottom",
                 "showLegend": true,
                 "calcs": [
-                  "mean",
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                },
+                "min": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 20,
+            "type": "timeseries",
+            "title": "Throughput",
+            "description": "Events and blocks processed per second.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 26,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(envio_progress_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "events/sec chain {{chainId}}"
+              },
+              {
+                "refId": "B",
+                "expr": "rate(envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "blocks/sec chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 21,
+            "type": "timeseries",
+            "title": "Write latency",
+            "description": "Milliseconds from event creation on chain to the write landing in Postgres.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 26,
+              "w": 6,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_progress_latency{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
                   "max"
                 ]
               },
@@ -236,826 +1290,38 @@ spec:
             }
           },
           {
-            "id": 5,
-            "type": "timeseries",
-            "title": "Block height",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 6,
-              "w": 8,
-              "h": 5
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "envio_progress_block{namespace=\"chain-indexer\"}",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "processed {{chainId}}"
-              },
-              {
-                "refId": "B",
-                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"}",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "head {{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": [
-                  "last"
-                ]
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 6,
-            "type": "timeseries",
-            "title": "Events/sec",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 8,
-              "y": 6,
-              "w": 8,
-              "h": 5
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_progress_events{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "chain {{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "ops",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 7,
-            "type": "timeseries",
-            "title": "Buffer",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 16,
-              "y": 6,
-              "w": 8,
-              "h": 5
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "envio_indexing_buffer_size{namespace=\"chain-indexer\"}",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "buffer {{chainId}}"
-              },
-              {
-                "refId": "B",
-                "expr": "envio_indexing_target_buffer_size{namespace=\"chain-indexer\"}",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "target"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": [
-                  "last"
-                ]
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 8,
-            "type": "row",
-            "title": "Fetching and source",
-            "collapsed": false,
-            "gridPos": {
-              "x": 0,
-              "y": 11,
-              "w": 24,
-              "h": 1
-            },
-            "panels": []
-          },
-          {
-            "id": 9,
-            "type": "timeseries",
-            "title": "Block-range fetches/sec",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 12,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_fetching_block_range_total{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "ops",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 10,
-            "type": "timeseries",
-            "title": "Events fetched/sec",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 8,
-              "y": 12,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_fetching_block_range_events_total{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "ops",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 11,
-            "type": "timeseries",
-            "title": "Source requests/sec",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 16,
-              "y": 12,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum by (source, method) (rate(envio_source_request_total{namespace=\"chain-indexer\"}[5m]))",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{source}} {{method}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "reqps",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 12,
-            "type": "timeseries",
-            "title": "Avg source request time",
-            "description": "seconds_total / request_total over the same window.",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 18,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum by (source, method) (rate(envio_source_request_seconds_total{namespace=\"chain-indexer\"}[5m])) / sum by (source, method) (rate(envio_source_request_total{namespace=\"chain-indexer\"}[5m]))",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{source}} {{method}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "s",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 13,
-            "type": "timeseries",
-            "title": "Time waiting on source",
-            "description": "Counter of seconds; rate() gives the fraction of wall-clock spent there.",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 8,
-              "y": 18,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_indexing_source_waiting_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "waiting {{chainId}}"
-              },
-              {
-                "refId": "B",
-                "expr": "rate(envio_indexing_source_querying_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "querying {{chainId}}"
-              },
-              {
-                "refId": "C",
-                "expr": "rate(envio_indexing_idle_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "idle {{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percentunit",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 14,
+            "id": 22,
             "type": "timeseries",
             "title": "Partitions and concurrency",
-            "description": "",
+            "description": "Fetch partitions and in-flight source queries.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 16,
-              "y": 18,
-              "w": 8,
-              "h": 6
+              "x": 18,
+              "y": 26,
+              "w": 6,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_indexing_partitions{namespace=\"chain-indexer\"}",
+                "expr": "envio_indexing_partitions{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "partitions {{chainId}}"
+                "legendFormat": "partitions chain {{chainId}}"
               },
               {
                 "refId": "B",
-                "expr": "envio_indexing_concurrency{namespace=\"chain-indexer\"}",
+                "expr": "envio_indexing_concurrency{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "concurrency {{chainId}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": [
-                  "last"
-                ]
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 15,
-            "type": "row",
-            "title": "Processing",
-            "collapsed": false,
-            "gridPos": {
-              "x": 0,
-              "y": 24,
-              "w": 24,
-              "h": 1
-            },
-            "panels": []
-          },
-          {
-            "id": 16,
-            "type": "timeseries",
-            "title": "Processing utilisation",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 25,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_processing_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "processing"
-              },
-              {
-                "refId": "B",
-                "expr": "rate(envio_preload_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "preload"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percentunit",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 17,
-            "type": "timeseries",
-            "title": "Stalled",
-            "description": "Where the pipeline is blocked: upstream fetching, or the database.",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 8,
-              "y": 25,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "rate(envio_processing_stalled_on_fetch_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "on fetch"
-              },
-              {
-                "refId": "B",
-                "expr": "rate(envio_processing_stalled_on_storage_write_seconds{namespace=\"chain-indexer\"}[5m])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "on storage write"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "percentunit",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 18,
-            "type": "timeseries",
-            "title": "Handler calls/sec",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 16,
-              "y": 25,
-              "w": 8,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum by (contract, event) (rate(envio_processing_handler_total{namespace=\"chain-indexer\"}[5m]))",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{contract}}.{{event}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "ops",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 19,
-            "type": "timeseries",
-            "title": "Avg handler duration",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 31,
-              "w": 12,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum by (contract, event) (rate(envio_processing_handler_seconds{namespace=\"chain-indexer\"}[5m])) / sum by (contract, event) (rate(envio_processing_handler_total{namespace=\"chain-indexer\"}[5m]))",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "{{contract}}.{{event}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "s",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 20,
-            "type": "timeseries",
-            "title": "Batch size",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 12,
-              "y": 31,
-              "w": 12,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "envio_processing_max_batch_size{namespace=\"chain-indexer\"}",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "max batch size"
+                "legendFormat": "concurrency chain {{chainId}}"
               }
             ],
             "options": {
@@ -1090,42 +1356,42 @@ spec:
             }
           },
           {
-            "id": 21,
+            "id": 23,
             "type": "row",
-            "title": "Storage",
+            "title": "Source and fetching",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 37,
+              "y": 33,
               "w": 24,
               "h": 1
             },
             "panels": []
           },
           {
-            "id": 22,
+            "id": 24,
             "type": "timeseries",
-            "title": "Writes/sec",
-            "description": "",
+            "title": "Source requests/sec by method",
+            "description": "heightPush and heightPushIgnored are the subscription-health signal. A drop to zero with getHeight rising means the push subscription went stale and the indexer fell back to polling.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
               "x": 0,
-              "y": 38,
-              "w": 8,
-              "h": 6
+              "y": 34,
+              "w": 12,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum by (storage) (rate(envio_storage_write_total{namespace=\"chain-indexer\"}[5m]))",
+                "expr": "sum by (source, method) (rate(envio_source_request_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "{{storage}}"
+                "legendFormat": "{{source}} {{method}}"
               }
             ],
             "options": {
@@ -1133,7 +1399,10 @@ spec:
                 "displayMode": "list",
                 "placement": "bottom",
                 "showLegend": true,
-                "calcs": []
+                "calcs": [
+                  "last",
+                  "max"
+                ]
               },
               "tooltip": {
                 "mode": "multi",
@@ -1142,7 +1411,7 @@ spec:
             },
             "fieldConfig": {
               "defaults": {
-                "unit": "ops",
+                "unit": "reqps",
                 "custom": {
                   "lineWidth": 1,
                   "fillOpacity": 12,
@@ -1157,29 +1426,29 @@ spec:
             }
           },
           {
-            "id": 23,
+            "id": 25,
             "type": "timeseries",
-            "title": "Avg write duration",
-            "description": "",
+            "title": "Avg source request time",
+            "description": "Mean latency per data-source call, by method.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 8,
-              "y": 38,
-              "w": 8,
-              "h": 6
+              "x": 12,
+              "y": 34,
+              "w": 12,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum by (storage) (rate(envio_storage_write_seconds{namespace=\"chain-indexer\"}[5m])) / sum by (storage) (rate(envio_storage_write_total{namespace=\"chain-indexer\"}[5m]))",
+                "expr": "sum by (source, method) (rate(envio_source_request_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m])) / clamp_min(sum by (source, method) (rate(envio_source_request_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m])), 0.0001)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "{{storage}}"
+                "legendFormat": "{{source}} {{method}}"
               }
             ],
             "options": {
@@ -1187,7 +1456,10 @@ spec:
                 "displayMode": "list",
                 "placement": "bottom",
                 "showLegend": true,
-                "calcs": []
+                "calcs": [
+                  "last",
+                  "max"
+                ]
               },
               "tooltip": {
                 "mode": "multi",
@@ -1211,29 +1483,38 @@ spec:
             }
           },
           {
-            "id": 24,
+            "id": 26,
             "type": "timeseries",
-            "title": "Loads/sec",
-            "description": "",
+            "title": "Fetch efficiency",
+            "description": "How much each block-range fetch is actually returning. Low values mean chatty fetching.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 16,
-              "y": 38,
+              "x": 0,
+              "y": 41,
               "w": 8,
-              "h": 6
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum by (operation, storage) (rate(envio_storage_load_total{namespace=\"chain-indexer\"}[5m]))",
+                "expr": "rate(envio_fetching_block_range_events_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]) / clamp_min(rate(envio_fetching_block_range_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]), 0.0001)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "{{operation}} {{storage}}"
+                "legendFormat": "events per fetch chain {{chainId}}"
+              },
+              {
+                "refId": "B",
+                "expr": "rate(envio_fetching_block_range_size{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]) / clamp_min(rate(envio_fetching_block_range_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]), 0.0001)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "blocks per fetch chain {{chainId}}"
               }
             ],
             "options": {
@@ -1241,7 +1522,10 @@ spec:
                 "displayMode": "list",
                 "placement": "bottom",
                 "showLegend": true,
-                "calcs": []
+                "calcs": [
+                  "last",
+                  "max"
+                ]
               },
               "tooltip": {
                 "mode": "multi",
@@ -1250,7 +1534,7 @@ spec:
             },
             "fieldConfig": {
               "defaults": {
-                "unit": "ops",
+                "unit": "none",
                 "custom": {
                   "lineWidth": 1,
                   "fillOpacity": 12,
@@ -1259,83 +1543,6 @@ spec:
                     "mode": "none",
                     "group": "A"
                   }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 25,
-            "type": "row",
-            "title": "Reorgs and rollbacks",
-            "collapsed": false,
-            "gridPos": {
-              "x": 0,
-              "y": 44,
-              "w": 24,
-              "h": 1
-            },
-            "panels": []
-          },
-          {
-            "id": 26,
-            "type": "stat",
-            "title": "Reorgs (24h)",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 0,
-              "y": 45,
-              "w": 4,
-              "h": 5
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum(increase(envio_reorg_detected_total{namespace=\"chain-indexer\"}[24h]))",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "instant": true,
-                "range": false
-              }
-            ],
-            "options": {
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "colorMode": "background",
-              "graphMode": "none",
-              "textMode": "auto"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 1
-                    },
-                    {
-                      "color": "red",
-                      "value": 10
-                    }
-                  ]
                 }
               },
               "overrides": []
@@ -1344,36 +1551,27 @@ spec:
           {
             "id": 27,
             "type": "timeseries",
-            "title": "Reorgs and rollbacks/hour",
-            "description": "",
+            "title": "Parse share of fetch time",
+            "description": "Share of fetch time spent parsing responses rather than waiting on the network.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 4,
-              "y": 45,
-              "w": 10,
-              "h": 5
+              "x": 8,
+              "y": 41,
+              "w": 8,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "increase(envio_reorg_detected_total{namespace=\"chain-indexer\"}[1h])",
+                "expr": "rate(envio_fetching_block_range_parse_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]) / clamp_min(rate(envio_fetching_block_range_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}[5m]), 0.0001)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
                 },
-                "legendFormat": "reorgs {{chainId}}"
-              },
-              {
-                "refId": "B",
-                "expr": "increase(envio_rollback_total{namespace=\"chain-indexer\"}[1h])",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "rollbacks"
+                "legendFormat": "chain {{chainId}}"
               }
             ],
             "options": {
@@ -1381,7 +1579,10 @@ spec:
                 "displayMode": "list",
                 "placement": "bottom",
                 "showLegend": true,
-                "calcs": []
+                "calcs": [
+                  "last",
+                  "max"
+                ]
               },
               "tooltip": {
                 "mode": "multi",
@@ -1390,7 +1591,7 @@ spec:
             },
             "fieldConfig": {
               "defaults": {
-                "unit": "none",
+                "unit": "percentunit",
                 "custom": {
                   "lineWidth": 1,
                   "fillOpacity": 12,
@@ -1399,7 +1600,8 @@ spec:
                     "mode": "none",
                     "group": "A"
                   }
-                }
+                },
+                "min": 0
               },
               "overrides": []
             }
@@ -1407,27 +1609,27 @@ spec:
           {
             "id": 28,
             "type": "timeseries",
-            "title": "Rolled-back events/hour",
-            "description": "",
+            "title": "Rate-limit events",
+            "description": "Log-derived. HyperSync rate limiting is the usual cause of a FETCH bottleneck.",
             "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
+              "type": "loki",
+              "uid": "loki"
             },
             "gridPos": {
-              "x": 14,
-              "y": 45,
-              "w": 10,
-              "h": 5
+              "x": 16,
+              "y": 41,
+              "w": 8,
+              "h": 7
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "increase(envio_rollback_events{namespace=\"chain-indexer\"}[1h])",
                 "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
+                  "type": "loki",
+                  "uid": "loki"
                 },
-                "legendFormat": "events"
+                "expr": "sum(count_over_time({namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"} |= \"rate-limited\" [$__interval]))",
+                "legendFormat": "rate-limited"
               }
             ],
             "options": {
@@ -1435,7 +1637,10 @@ spec:
                 "displayMode": "list",
                 "placement": "bottom",
                 "showLegend": true,
-                "calcs": []
+                "calcs": [
+                  "last",
+                  "max"
+                ]
               },
               "tooltip": {
                 "mode": "multi",
@@ -1461,11 +1666,11 @@ spec:
           {
             "id": 29,
             "type": "row",
-            "title": "Runtime and logs",
+            "title": "Handlers",
             "collapsed": false,
             "gridPos": {
               "x": 0,
-              "y": 50,
+              "y": 48,
               "w": 24,
               "h": 1
             },
@@ -1473,23 +1678,1318 @@ spec:
           },
           {
             "id": 30,
-            "type": "timeseries",
-            "title": "CPU / memory",
-            "description": "",
+            "type": "table",
+            "title": "Handler leaderboard",
+            "description": "Per contract and event: call rate and mean duration. Sort by avg duration to find the slow handler.",
             "datasource": {
               "type": "prometheus",
               "uid": "prometheus"
             },
             "gridPos": {
               "x": 0,
-              "y": 51,
-              "w": 8,
-              "h": 6
+              "y": 49,
+              "w": 14,
+              "h": 8
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"chain-indexer\",container=\"indexer\"}[5m]))",
+                "expr": "sum by (contract, event) (rate(envio_processing_handler_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false,
+                "format": "table"
+              },
+              {
+                "refId": "B",
+                "expr": "sum by (contract, event) (rate(envio_processing_handler_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])) / clamp_min(sum by (contract, event) (rate(envio_processing_handler_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])), 0.0001)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false,
+                "format": "table"
+              },
+              {
+                "refId": "C",
+                "expr": "sum by (contract, event) (rate(envio_preload_handler_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false,
+                "format": "table"
+              }
+            ],
+            "transformations": [
+              {
+                "id": "joinByField",
+                "options": {
+                  "byField": "event",
+                  "mode": "outer"
+                }
+              },
+              {
+                "id": "organize",
+                "options": {
+                  "excludeByName": {
+                    "Time 1": true,
+                    "Time 2": true,
+                    "Time 3": true,
+                    "contract 2": true,
+                    "contract 3": true
+                  },
+                  "renameByName": {
+                    "contract 1": "contract",
+                    "event": "event",
+                    "Value #A": "calls/sec",
+                    "Value #B": "avg duration",
+                    "Value #C": "preload sec/sec"
+                  }
+                }
+              },
+              {
+                "id": "sortBy",
+                "options": {
+                  "fields": {},
+                  "sort": [
+                    {
+                      "field": "avg duration",
+                      "desc": true
+                    }
+                  ]
+                }
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "custom": {
+                  "align": "auto",
+                  "cellOptions": {
+                    "type": "auto"
+                  }
+                }
+              },
+              "overrides": [
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "avg duration"
+                  },
+                  "properties": [
+                    {
+                      "id": "unit",
+                      "value": "s"
+                    },
+                    {
+                      "id": "custom.cellOptions",
+                      "value": {
+                        "type": "color-background"
+                      }
+                    },
+                    {
+                      "id": "thresholds",
+                      "value": {
+                        "mode": "absolute",
+                        "steps": [
+                          {
+                            "color": "green",
+                            "value": null
+                          },
+                          {
+                            "color": "yellow",
+                            "value": 0.01
+                          },
+                          {
+                            "color": "red",
+                            "value": 0.1
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                },
+                {
+                  "matcher": {
+                    "id": "byName",
+                    "options": "calls/sec"
+                  },
+                  "properties": [
+                    {
+                      "id": "unit",
+                      "value": "ops"
+                    }
+                  ]
+                }
+              ]
+            },
+            "options": {
+              "showHeader": true,
+              "footer": {
+                "show": false
+              }
+            }
+          },
+          {
+            "id": 31,
+            "type": "timeseries",
+            "title": "Handler calls/sec",
+            "description": "Handler execution rate by contract and event.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 14,
+              "y": 49,
+              "w": 10,
+              "h": 8
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum by (contract, event) (rate(envio_processing_handler_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{contract}} {{event}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 32,
+            "type": "timeseries",
+            "title": "Processing utilisation",
+            "description": "Share of wall clock spent in handlers and entity preloading.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 57,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(envio_processing_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "handlers"
+              },
+              {
+                "refId": "B",
+                "expr": "rate(envio_preload_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "preload"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                },
+                "min": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 33,
+            "type": "timeseries",
+            "title": "Batch size",
+            "description": "Configured max batch size against the live buffer depth.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 57,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "envio_processing_max_batch_size{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "max batch"
+              },
+              {
+                "refId": "B",
+                "expr": "envio_indexing_buffer_size{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "buffer chain {{chainId}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 34,
+            "type": "row",
+            "title": "Storage",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 64,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 35,
+            "type": "timeseries",
+            "title": "Writes/sec",
+            "description": "Successful batch writes to storage.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 65,
+              "w": 8,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum by (storage) (rate(envio_storage_write_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]))",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{storage}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 36,
+            "type": "timeseries",
+            "title": "Avg write duration",
+            "description": "Mean time per batch write.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 65,
+              "w": 8,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum by (storage) (rate(envio_storage_write_seconds{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])) / clamp_min(sum by (storage) (rate(envio_storage_write_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])), 0.0001)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{storage}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 37,
+            "type": "timeseries",
+            "title": "Loads/sec",
+            "description": "Entity loads. Reads zero when handlers only create entities and never load them.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 65,
+              "w": 8,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum by (operation, storage) (rate(envio_storage_load_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "{{operation}} {{storage}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "ops",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 38,
+            "type": "row",
+            "title": "Reorgs and rollbacks",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 72,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 39,
+            "type": "stat",
+            "title": "Reorgs (range)",
+            "description": "Reorgs detected over the dashboard time range. Guarded so a quiet chain reads 0, not No data.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(increase(envio_reorg_detected_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[$__range])) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 40,
+            "type": "stat",
+            "title": "Rollbacks (range)",
+            "description": "Successful rollbacks on reorg.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 4,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(increase(envio_rollback_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[$__range])) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "orange",
+                      "value": 1
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 41,
+            "type": "stat",
+            "title": "Events rolled back",
+            "description": "Events undone by rollbacks.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(increase(envio_rollback_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[$__range])) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 42,
+            "type": "stat",
+            "title": "Reorg threshold",
+            "description": "Whether indexing is currently inside the reorg threshold.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(envio_reorg_threshold{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "OUTSIDE",
+                        "color": "green",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "WITHIN",
+                        "color": "yellow",
+                        "index": 1
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 43,
+            "type": "stat",
+            "title": "Rollback on reorg",
+            "description": "Whether rollback on reorg is enabled.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 16,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "max(envio_rollback_enabled{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "background",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "DISABLED",
+                        "color": "red",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "ENABLED",
+                        "color": "green",
+                        "index": 1
+                      }
+                    }
+                  }
+                ],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 44,
+            "type": "stat",
+            "title": "Addresses tracked",
+            "description": "Address registrations on chain, static and dynamic.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 20,
+              "y": 73,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(envio_indexing_addresses{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", chainId=~\"$chain\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "value",
+              "graphMode": "none",
+              "textMode": "auto",
+              "justifyMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                },
+                "decimals": 0
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 45,
+            "type": "timeseries",
+            "title": "Rollbacks per hour",
+            "description": "All three guarded with or vector(0) so a quiet chain plots a flat 0.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 77,
+              "w": 24,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "increase(envio_reorg_detected_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "reorgs detected"
+              },
+              {
+                "refId": "B",
+                "expr": "increase(envio_rollback_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "rollbacks"
+              },
+              {
+                "refId": "C",
+                "expr": "increase(envio_rollback_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]) or vector(0)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "events rolled back"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 46,
+            "type": "row",
+            "title": "Node.js runtime",
+            "collapsed": false,
+            "gridPos": {
+              "x": 0,
+              "y": 84,
+              "w": 24,
+              "h": 1
+            },
+            "panels": []
+          },
+          {
+            "id": 47,
+            "type": "timeseries",
+            "title": "Event loop lag",
+            "description": "Sustained lag with idle CPU means a synchronous handler is blocking the loop. Container metrics cannot see this.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 85,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "nodejs_eventloop_lag_p50_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "p50"
+              },
+              {
+                "refId": "B",
+                "expr": "nodejs_eventloop_lag_p90_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "p90"
+              },
+              {
+                "refId": "C",
+                "expr": "nodejs_eventloop_lag_p99_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "p99"
+              },
+              {
+                "refId": "D",
+                "expr": "nodejs_eventloop_lag_max_seconds{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "max"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 48,
+            "type": "timeseries",
+            "title": "Event loop utilisation",
+            "description": "Fraction of time the event loop was active.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 85,
+              "w": 6,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "nodejs_eventloop_utilization{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "utilisation"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                },
+                "min": 0,
+                "max": 1
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 49,
+            "type": "timeseries",
+            "title": "GC pause",
+            "description": "Mean garbage-collection pause by kind.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 18,
+              "y": 85,
+              "w": 6,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "rate(nodejs_gc_duration_seconds_sum{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]) / clamp_min(rate(nodejs_gc_duration_seconds_count{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m]), 0.0001)",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "avg pause {{kind}}"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 50,
+            "type": "timeseries",
+            "title": "Heap",
+            "description": "V8 heap and process RSS from the runtime registry.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 0,
+              "y": 92,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "nodejs_heap_size_used_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "heap used"
+              },
+              {
+                "refId": "B",
+                "expr": "nodejs_heap_size_total_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "heap total"
+              },
+              {
+                "refId": "C",
+                "expr": "process_resident_memory_bytes{job=\"indexer\", namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "legendFormat": "rss"
+              }
+            ],
+            "options": {
+              "legend": {
+                "displayMode": "list",
+                "placement": "bottom",
+                "showLegend": true,
+                "calcs": [
+                  "last",
+                  "max"
+                ]
+              },
+              "tooltip": {
+                "mode": "multi",
+                "sort": "desc"
+              }
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "bytes",
+                "custom": {
+                  "lineWidth": 1,
+                  "fillOpacity": 12,
+                  "showPoints": "never",
+                  "stacking": {
+                    "mode": "none",
+                    "group": "A"
+                  }
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
+            "id": 51,
+            "type": "timeseries",
+            "title": "Container CPU / memory",
+            "description": "cAdvisor view, for comparison against the in-process numbers.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 92,
+              "w": 12,
+              "h": 7
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"indexer\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1498,7 +2998,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(container_memory_working_set_bytes{namespace=\"chain-indexer\",container=\"indexer\"}) / 1024 / 1024 / 1024",
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", container=\"indexer\"}) / 1024 / 1024 / 1024",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1538,144 +3038,30 @@ spec:
             }
           },
           {
-            "id": 31,
-            "type": "stat",
-            "title": "Restarts",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
+            "id": 52,
+            "type": "row",
+            "title": "Logs",
+            "collapsed": false,
             "gridPos": {
-              "x": 8,
-              "y": 51,
-              "w": 4,
-              "h": 6
+              "x": 0,
+              "y": 99,
+              "w": 24,
+              "h": 1
             },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"chain-indexer\",container=\"indexer\"})",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "instant": true,
-                "range": false
-              }
-            ],
-            "options": {
-              "reduceOptions": {
-                "calcs": [
-                  "lastNotNull"
-                ],
-                "fields": "",
-                "values": false
-              },
-              "colorMode": "background",
-              "graphMode": "none",
-              "textMode": "auto"
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "mappings": [],
-                "thresholds": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "green",
-                      "value": null
-                    },
-                    {
-                      "color": "orange",
-                      "value": 1
-                    },
-                    {
-                      "color": "red",
-                      "value": 5
-                    }
-                  ]
-                }
-              },
-              "overrides": []
-            }
+            "panels": []
           },
           {
-            "id": 32,
-            "type": "timeseries",
-            "title": "Effect queue",
-            "description": "",
-            "datasource": {
-              "type": "prometheus",
-              "uid": "prometheus"
-            },
-            "gridPos": {
-              "x": 12,
-              "y": 51,
-              "w": 12,
-              "h": 6
-            },
-            "targets": [
-              {
-                "refId": "A",
-                "expr": "sum by (effect) (envio_effect_queue{namespace=\"chain-indexer\"})",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "queue {{effect}}"
-              },
-              {
-                "refId": "B",
-                "expr": "sum by (effect) (envio_effect_active_calls{namespace=\"chain-indexer\"})",
-                "datasource": {
-                  "type": "prometheus",
-                  "uid": "prometheus"
-                },
-                "legendFormat": "active {{effect}}"
-              }
-            ],
-            "options": {
-              "legend": {
-                "displayMode": "list",
-                "placement": "bottom",
-                "showLegend": true,
-                "calcs": []
-              },
-              "tooltip": {
-                "mode": "multi",
-                "sort": "desc"
-              }
-            },
-            "fieldConfig": {
-              "defaults": {
-                "unit": "none",
-                "custom": {
-                  "lineWidth": 1,
-                  "fillOpacity": 12,
-                  "showPoints": "never",
-                  "stacking": {
-                    "mode": "none",
-                    "group": "A"
-                  }
-                }
-              },
-              "overrides": []
-            }
-          },
-          {
-            "id": 33,
+            "id": 53,
             "type": "logs",
-            "title": "Indexer logs",
+            "title": "Errors and warnings",
             "datasource": {
               "type": "loki",
               "uid": "loki"
             },
             "gridPos": {
               "x": 0,
-              "y": 57,
-              "w": 24,
+              "y": 100,
+              "w": 12,
               "h": 8
             },
             "targets": [
@@ -1685,7 +3071,42 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"chain-indexer\", app=\"indexer\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"} | json | log_level=~\"error|warn|fatal\"",
+                "queryType": "range"
+              }
+            ],
+            "options": {
+              "showTime": true,
+              "showLabels": false,
+              "wrapLogMessage": true,
+              "prettifyLogMessage": false,
+              "sortOrder": "Descending",
+              "enableLogDetails": true,
+              "dedupStrategy": "none"
+            }
+          },
+          {
+            "id": 54,
+            "type": "logs",
+            "title": "All indexer logs",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "gridPos": {
+              "x": 12,
+              "y": 100,
+              "w": 12,
+              "h": 8
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "datasource": {
+                  "type": "loki",
+                  "uid": "loki"
+                },
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"}",
                 "queryType": "range"
               }
             ],

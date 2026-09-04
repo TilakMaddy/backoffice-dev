@@ -66,7 +66,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "min(envio_progress_ready{namespace=\"chain-indexer\"})",
+                "expr": "min(envio_progress_ready{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -139,7 +139,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"chain-indexer\",container=\"indexer\"})",
+                "expr": "sum(kube_pod_container_status_restarts_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -187,6 +187,64 @@ spec:
             }
           },
           {
+            "id": 30,
+            "type": "stat",
+            "title": "Total events",
+            "description": "Cumulative events processed and reflected in the database.",
+            "datasource": {
+              "type": "prometheus",
+              "uid": "prometheus"
+            },
+            "gridPos": {
+              "x": 8,
+              "y": 1,
+              "w": 4,
+              "h": 4
+            },
+            "targets": [
+              {
+                "refId": "A",
+                "expr": "sum(envio_progress_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
+                "datasource": {
+                  "type": "prometheus",
+                  "uid": "prometheus"
+                },
+                "format": "time_series",
+                "instant": true,
+                "range": false
+              }
+            ],
+            "options": {
+              "reduceOptions": {
+                "calcs": [
+                  "lastNotNull"
+                ],
+                "fields": "",
+                "values": false
+              },
+              "colorMode": "none",
+              "graphMode": "area",
+              "textMode": "auto"
+            },
+            "fieldConfig": {
+              "defaults": {
+                "unit": "short",
+                "decimals": 0,
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": []
+            }
+          },
+          {
             "id": 4,
             "type": "timeseries",
             "title": "Blocks behind head",
@@ -196,15 +254,15 @@ spec:
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 8,
+              "x": 12,
               "y": 1,
-              "w": 8,
+              "w": 6,
               "h": 4
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"} - envio_progress_block{namespace=\"chain-indexer\"}",
+                "expr": "envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"} - envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -254,15 +312,15 @@ spec:
               "uid": "prometheus"
             },
             "gridPos": {
-              "x": 16,
+              "x": 18,
               "y": 1,
-              "w": 8,
+              "w": 6,
               "h": 4
             },
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_progress_latency{namespace=\"chain-indexer\"}",
+                "expr": "envio_progress_latency{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -320,7 +378,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "envio_progress_block{namespace=\"chain-indexer\"}",
+                "expr": "envio_progress_block{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -330,7 +388,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "envio_indexing_known_height{namespace=\"chain-indexer\"}",
+                "expr": "envio_indexing_known_height{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -387,7 +445,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "rate(envio_progress_events{namespace=\"chain-indexer\"}[5m])",
+                "expr": "rate(envio_progress_events{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[5m])",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -442,7 +500,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"chain-indexer\",container=\"indexer\"}[5m]))",
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -452,7 +510,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(container_memory_working_set_bytes{namespace=\"chain-indexer\",container=\"indexer\"}) / 1024 / 1024 / 1024",
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",container=\"indexer\"}) / 1024 / 1024 / 1024",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -510,7 +568,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "increase(envio_reorg_detected_total{namespace=\"chain-indexer\"}[1h])",
+                "expr": "increase(envio_reorg_detected_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]) or vector(0)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -520,7 +578,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "increase(envio_rollback_total{namespace=\"chain-indexer\"}[1h])",
+                "expr": "increase(envio_rollback_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"}[1h]) or vector(0)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -579,7 +637,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"chain-indexer\", app=\"indexer\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"indexer\"}",
                 "queryType": "range"
               }
             ],
@@ -812,7 +870,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "kube_deployment_status_replicas_available{namespace=\"chain-indexer\",deployment=\"hasura\"}",
+                "expr": "kube_deployment_status_replicas_available{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",deployment=\"hasura\"}",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -881,7 +939,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"chain-indexer\", app=\"hasura\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", app=\"hasura\"}",
                 "queryType": "range"
               }
             ],
@@ -926,7 +984,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "count(cnpg_collector_up{namespace=\"chain-indexer\"} == 1)",
+                "expr": "count(cnpg_collector_up{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"} == 1)",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -991,7 +1049,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(cnpg_backends_total{namespace=\"chain-indexer\"})",
+                "expr": "sum(cnpg_backends_total{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1049,7 +1107,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"chain-indexer\",datname=\"indexer-db\"}[5m]))",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_commit{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1059,7 +1117,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"chain-indexer\",datname=\"indexer-db\"}[5m]))",
+                "expr": "sum(rate(cnpg_pg_stat_database_xact_rollback{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"}[5m]))",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1114,7 +1172,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "max(cnpg_pg_replication_lag{namespace=\"chain-indexer\"})",
+                "expr": "max(cnpg_pg_replication_lag{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1171,7 +1229,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "max(cnpg_pg_database_size_bytes{namespace=\"chain-indexer\",datname=\"indexer-db\"})",
+                "expr": "max(cnpg_pg_database_size_bytes{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\",datname=\"indexer-db\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1228,7 +1286,7 @@ spec:
             "targets": [
               {
                 "refId": "A",
-                "expr": "sum(cnpg_pgbouncer_pools_cl_active{namespace=\"chain-indexer\"})",
+                "expr": "sum(cnpg_pgbouncer_pools_cl_active{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1238,7 +1296,7 @@ spec:
               },
               {
                 "refId": "B",
-                "expr": "sum(cnpg_pgbouncer_pools_cl_waiting{namespace=\"chain-indexer\"})",
+                "expr": "sum(cnpg_pgbouncer_pools_cl_waiting{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1248,7 +1306,7 @@ spec:
               },
               {
                 "refId": "C",
-                "expr": "sum(cnpg_pgbouncer_pools_sv_active{namespace=\"chain-indexer\"})",
+                "expr": "sum(cnpg_pgbouncer_pools_sv_active{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\"})",
                 "datasource": {
                   "type": "prometheus",
                   "uid": "prometheus"
@@ -1307,7 +1365,7 @@ spec:
                   "type": "loki",
                   "uid": "loki"
                 },
-                "expr": "{namespace=\"chain-indexer\", pg_cluster=\"postgres\"}",
+                "expr": "{namespace=\"${APP_CHAIN_INDEXER_NAMESPACE}\", pg_cluster=\"postgres\"}",
                 "queryType": "range"
               }
             ],

@@ -11,3 +11,6 @@ spec:
     - port: metrics
       path: /metrics
       interval: 30s
+    - port: metrics
+      path: /metrics/runtime
+      interval: 30s
