@@ -111,7 +111,7 @@ spec:
             - name: LOG_STRATEGY
               value: ecs-console
             - name: ENVIO_TUI
-              value: false
+              value: "false"
 
             # --- Postgres: the indexer creates and owns its own tables here ---
             - name: ENVIO_PG_HOST
