@@ -12,7 +12,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: indexer
-  namespace: chain-indexer
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
     app: indexer
 spec:
@@ -29,7 +29,7 @@ apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: envio-token
-  namespace: chain-indexer
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   refreshInterval: 1h
   secretStoreRef:
@@ -48,7 +48,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: indexer
-  namespace: chain-indexer
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
     app: indexer
 spec:
@@ -68,11 +68,14 @@ spec:
       initContainers:
         - name: wait-for-hasura
           image: curlimages/curl:8.11.1
+          env:
+            - name: HASURA_HEALTHZ
+              value: http://${APP_CHAIN_INDEXER_HASURA_SVC}.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:${APP_CHAIN_INDEXER_HASURA_PORT}/healthz
           command:
             - sh
             - -c
             - |
-              until curl -sf http://hasura.chain-indexer.svc.cluster.local:8080/healthz; do
+              until curl -sf "$HASURA_HEALTHZ"; do
                 echo "waiting for hasura..."
                 sleep 2
               done
@@ -97,38 +100,38 @@ spec:
           env:
             # --- Postgres: the indexer creates and owns its own tables here ---
             - name: ENVIO_PG_HOST
-              value: chain-indexer-rw.chain-indexer.svc.cluster.local
+              value: ${APP_CHAIN_INDEXER_PG_CLUSTER}-rw.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local
             - name: ENVIO_PG_PORT
               value: "5432"
             - name: ENVIO_PG_DATABASE
-              value: indexer-db
+              value: ${APP_CHAIN_INDEXER_DB_NAME}
             - name: ENVIO_PG_SCHEMA
-              value: public
+              value: ${APP_CHAIN_INDEXER_DB_SCHEMA}
             - name: ENVIO_PG_SSL_MODE
               value: require
             # Same role Hasura connects as, so Hasura owns what it reads.
             - name: ENVIO_PG_USER
               valueFrom:
                 secretKeyRef:
-                  name: hasura-pass
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
                   key: username
             - name: ENVIO_PG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: hasura-pass
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
                   key: password
 
             # --- Hasura: must be the /v1/metadata URL, Envio slices the path ---
             - name: ENVIO_HASURA
               value: "true"
             - name: HASURA_GRAPHQL_ENDPOINT
-              value: http://hasura.chain-indexer.svc.cluster.local:8080/v1/metadata
+              value: http://${APP_CHAIN_INDEXER_HASURA_SVC}.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:${APP_CHAIN_INDEXER_HASURA_PORT}/v1/metadata
             - name: HASURA_GRAPHQL_ROLE
               value: admin
             - name: HASURA_GRAPHQL_ADMIN_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: hasura-env
+                  name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
                   key: HASURA_GRAPHQL_ADMIN_SECRET
 
             # HyperSync requires a token: https://envio.dev/app/api-tokens

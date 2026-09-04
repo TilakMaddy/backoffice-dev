@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chain-indexer-vars
+  namespace: flux-system
+data:
+  APP_CHAIN_INDEXER_NAMESPACE: chain-indexer
+
+  APP_CHAIN_INDEXER_PG_CLUSTER: chain-indexer
+  APP_CHAIN_INDEXER_PG_POOLER: chain-indexer-edge
+
+  APP_CHAIN_INDEXER_PG_CATALOG: chain-indexer-postgresql-minimal-trixie
+  APP_CHAIN_INDEXER_PG_MAJOR: "18"
+
+  APP_CHAIN_INDEXER_DB_NAME: indexer-db
+  APP_CHAIN_INDEXER_DB_ROLE: hasura
+  APP_CHAIN_INDEXER_DB_SCHEMA: public
+
+  APP_CHAIN_INDEXER_HASURA_SVC: hasura
+  APP_CHAIN_INDEXER_HASURA_PORT: "8080"
+  APP_CHAIN_INDEXER_PG_ROUTE: chain-indexer-pg-route
+
+  APP_CHAIN_INDEXER_HASURA_HOSTNAME: hasura-chain-indexer
+  APP_CHAIN_INDEXER_PG_HOSTNAME: postgres-chain-indexer

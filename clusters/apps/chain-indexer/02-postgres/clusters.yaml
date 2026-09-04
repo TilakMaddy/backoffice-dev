@@ -1,8 +1,8 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: chain-indexer
-  namespace: chain-indexer
+  name: ${APP_CHAIN_INDEXER_PG_CLUSTER}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   instances: ${PG_INSTANCES}
 
@@ -41,8 +41,8 @@ spec:
   imageCatalogRef:
     apiGroup: postgresql.cnpg.io
     kind: ClusterImageCatalog
-    name: chain-indexer-postgresql-minimal-trixie
-    major: 18
+    name: ${APP_CHAIN_INDEXER_PG_CATALOG}
+    major: ${APP_CHAIN_INDEXER_PG_MAJOR}
 
   bootstrap:
     initdb:

@@ -2,29 +2,28 @@ apiVersion: v1
 kind: Secret
 type: Opaque
 metadata:
-  name: hasura-env
-  namespace: chain-indexer
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 stringData:
-  HASURA_GRAPHQL_DATABASE_URL: postgres://hasura:pass123@chain-indexer-rw.chain-indexer.svc.cluster.local:5432/indexer-db?sslmode=verify-full&sslrootcert=/etc/ssl/pg/ca.crt
   HASURA_GRAPHQL_ADMIN_SECRET: admin123
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hasura
-  namespace: chain-indexer
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
-    app: hasura
+    app: ${APP_CHAIN_INDEXER_HASURA_SVC}
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: hasura
+      app: ${APP_CHAIN_INDEXER_HASURA_SVC}
   template:
     metadata:
       labels:
-        app: hasura
+        app: ${APP_CHAIN_INDEXER_HASURA_SVC}
     spec:
       terminationGracePeriodSeconds: 30
       nodeSelector:
@@ -36,22 +35,34 @@ spec:
           nodeTaintsPolicy: Honor
           labelSelector:
             matchLabels:
-              app: hasura
+              app: ${APP_CHAIN_INDEXER_HASURA_SVC}
       volumes:
         - name: pg-ca
           secret:
-            secretName: chain-indexer-ca
+            secretName: ${APP_CHAIN_INDEXER_PG_CLUSTER}-ca
             items:
               - key: ca.crt
                 path: ca.crt
       containers:
-        - name: hasura
+        - name: ${APP_CHAIN_INDEXER_HASURA_SVC}
           image: hasura/graphql-engine:v2.50.1
           imagePullPolicy: IfNotPresent
           envFrom:
             - secretRef:
-                name: hasura-env
+                name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
           env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: password
+            - name: HASURA_GRAPHQL_DATABASE_URL
+              value: postgres://$(PG_USER):$(PG_PASSWORD)@${APP_CHAIN_INDEXER_PG_CLUSTER}-rw.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:5432/${APP_CHAIN_INDEXER_DB_NAME}?sslmode=verify-full&sslrootcert=/etc/ssl/pg/ca.crt
             - name: HASURA_GRAPHQL_ENABLE_CONSOLE
               value: "true"
             - name: HASURA_GRAPHQL_DEV_MODE
@@ -66,7 +77,7 @@ spec:
               value: "10"
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: ${APP_CHAIN_INDEXER_HASURA_PORT}
           volumeMounts:
             - name: pg-ca
               mountPath: /etc/ssl/pg
@@ -100,24 +111,24 @@ spec:
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: hasura
-  namespace: chain-indexer
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   maxUnavailable: 1
   selector:
     matchLabels:
-      app: hasura
+      app: ${APP_CHAIN_INDEXER_HASURA_SVC}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: hasura
-  namespace: chain-indexer
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   selector:
-    app: hasura
+    app: ${APP_CHAIN_INDEXER_HASURA_SVC}
   ports:
     - name: http
-      port: 8080
+      port: ${APP_CHAIN_INDEXER_HASURA_PORT}
       targetPort: http
