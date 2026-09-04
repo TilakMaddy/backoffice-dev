@@ -8,6 +8,7 @@ spec:
     name: ${APP_CHAIN_INDEXER_PG_CLUSTER}
   name: ${APP_CHAIN_INDEXER_DB_ROLE} # must match
   login: true
+  databaseRoleReclaimPolicy: delete
   passwordSecret:
     name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
 

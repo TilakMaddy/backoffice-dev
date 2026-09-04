@@ -8,6 +8,6 @@ spec:
     name: ${APP_CHAIN_INDEXER_PG_CLUSTER}
   name: ${APP_CHAIN_INDEXER_DB_NAME}
   owner: ${APP_CHAIN_INDEXER_DB_ROLE}
-  databaseReclaimPolicy: retain
+  databaseReclaimPolicy: delete
 
 ---
