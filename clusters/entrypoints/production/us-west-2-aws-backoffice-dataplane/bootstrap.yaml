@@ -57,6 +57,7 @@ spec:
   postBuild:
     substitute:
       CLUSTER_CONFIG: platform-vars
+      CLUSTER_SECRET_CONFIG: platform-secret-vars
       PLATFORM_SOURCE: platform-foundation
       PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
       PLATFORM_NAMESPACE: platform-system
