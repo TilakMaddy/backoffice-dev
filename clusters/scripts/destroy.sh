@@ -9,7 +9,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 # and everything between them in the layer-zero package under platform/.
 # Children are deleted before their parent so each inventory is garbage-collected
 # in order rather than cascading out of a single prune.
-stages=(apps shims core base operators platform secrets-eso secrets-operators secrets bootstrap)
+stages=(observability-instances observability-collectors apps observability-operators observability shims core base operators platform secrets-eso secrets-operators secrets bootstrap)
 
 halt_reconciliation() {
     fx suspend source git flux-system

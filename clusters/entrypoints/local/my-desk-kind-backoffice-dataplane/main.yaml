@@ -4,17 +4,17 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
-  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work
+  CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
   PG_INSTANCES: "3"
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
   OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
-  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:staging
-  INDEXER_IMAGE_PULL_POLICY: Always
-  INDEXER_KEEL_POLICY: force
+  INDEXER_IMAGE_NAME: my-envio-indexer:local
+  INDEXER_IMAGE_PULL_POLICY: IfNotPresent
+  INDEXER_KEEL_POLICY: never
   INDEXER_KEEL_TRIGGER: manual
-  INDEXER_KEEL_POLL_INTERVAL: 1m
+  INDEXER_KEEL_POLL_INTERVAL: 1h
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -23,9 +23,9 @@ metadata:
   name: common
   namespace: flux-system
 spec:
-  interval: 2m0s
-  retryInterval: 30s
-  timeout: 3m0s
+  interval: 30s
+  retryInterval: 15s
+  timeout: 1m0s
   path: ./clusters/common
   prune: true
   wait: true
@@ -42,9 +42,9 @@ metadata:
   name: apps
   namespace: flux-system
 spec:
-  interval: 2m0s
-  retryInterval: 30s
-  timeout: 3m0s
+  interval: 30s
+  retryInterval: 15s
+  timeout: 1m0s
   path: ./clusters/apps
   prune: true
   wait: true
@@ -70,9 +70,9 @@ metadata:
   name: observability
   namespace: flux-system
 spec:
-  interval: 2m0s
-  retryInterval: 30s
-  timeout: 3m0s
+  interval: 30s
+  retryInterval: 15s
+  timeout: 1m0s
   path: ./clusters/packages/layer-zero/platform/observability
   prune: true
   wait: true

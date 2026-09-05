@@ -1,0 +1,193 @@
+# Envio HyperIndex.
+#
+# The indexer owns its own schema: on start it creates its tables in
+# ENVIO_PG_SCHEMA, then calls Hasura's metadata API to clear_metadata and
+# re-track them. Hasura therefore holds NO declarative metadata of its own —
+# anything applied there would be wiped on the indexer's next boot.
+#
+# A StatefulSet rather than a Deployment because exactly one indexer may write
+# at a time: a Deployment's rolling update briefly runs two pods, while a
+# StatefulSet terminates the old pod before creating its replacement.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP_CHAIN_INDEXER_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+  labels:
+    app: ${APP_CHAIN_INDEXER_SVC}
+spec:
+  clusterIP: None # headless; required by the StatefulSet's serviceName
+  selector:
+    app: ${APP_CHAIN_INDEXER_SVC}
+  ports:
+    - name: metrics
+      port: 9898
+      targetPort: metrics
+
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: envio-token
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: envio-token
+    creationPolicy: Owner
+  data:
+    - secretKey: token
+      remoteRef:
+        key: ${OP_VAULT_ENVIO_TOKEN}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ${APP_CHAIN_INDEXER_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+  labels:
+    app: ${APP_CHAIN_INDEXER_SVC}
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    keel.sh/policy: "${INDEXER_KEEL_POLICY}"
+    keel.sh/trigger: "${INDEXER_KEEL_TRIGGER}"
+    keel.sh/matchTag: "true"
+    keel.sh/pollSchedule: "@every ${INDEXER_KEEL_POLL_INTERVAL}"
+spec:
+  serviceName: ${APP_CHAIN_INDEXER_SVC}
+  replicas: 1 # never raise this
+  selector:
+    matchLabels:
+      app: ${APP_CHAIN_INDEXER_SVC}
+  template:
+    metadata:
+      labels:
+        app: ${APP_CHAIN_INDEXER_SVC}
+    spec:
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        node-role.kubernetes.io/general: ""
+      initContainers:
+        - name: wait-for-hasura
+          image: curlimages/curl:8.11.1
+          env:
+            - name: HASURA_HEALTHZ
+              value: http://${APP_CHAIN_INDEXER_HASURA_SVC}.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:${APP_CHAIN_INDEXER_HASURA_PORT}/healthz
+          command:
+            - sh
+            - -c
+            - |
+              until curl -sf "$HASURA_HEALTHZ"; do
+                echo "waiting for hasura..."
+                sleep 2
+              done
+              echo "hasura is ready"
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 32Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 100
+            runAsGroup: 101
+            capabilities:
+              drop: ["ALL"]
+
+      containers:
+        - name: ${APP_CHAIN_INDEXER_SVC}
+          image: ${INDEXER_IMAGE_NAME}
+          imagePullPolicy: ${INDEXER_IMAGE_PULL_POLICY}
+          env:
+            - name: LOG_LEVEL
+              value: trace
+            - name: LOG_STRATEGY
+              value: ecs-console
+            - name: ENVIO_TUI
+              value: "false"
+
+            # --- Postgres: the indexer creates and owns its own tables here ---
+            - name: ENVIO_PG_HOST
+              value: ${APP_CHAIN_INDEXER_PG_CLUSTER}-rw.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local
+            - name: ENVIO_PG_PORT
+              value: "5432"
+            - name: ENVIO_PG_DATABASE
+              value: ${APP_CHAIN_INDEXER_DB_NAME}
+            - name: ENVIO_PG_SCHEMA
+              value: ${APP_CHAIN_INDEXER_DB_SCHEMA}
+            - name: ENVIO_PG_SSL_MODE
+              value: require
+
+            # Same role Hasura connects as, so Hasura owns what it reads.
+            - name: ENVIO_PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: username
+            - name: ENVIO_PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: password
+
+            # --- Hasura: must be the /v1/metadata URL, Envio slices the path ---
+            - name: ENVIO_HASURA
+              value: "true"
+            - name: HASURA_GRAPHQL_ENDPOINT
+              value: http://${APP_CHAIN_INDEXER_HASURA_SVC}.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:${APP_CHAIN_INDEXER_HASURA_PORT}/v1/metadata
+            - name: HASURA_GRAPHQL_ROLE
+              value: admin
+            - name: HASURA_GRAPHQL_ADMIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
+                  key: HASURA_GRAPHQL_ADMIN_SECRET
+
+            # HyperSync requires a token: https://envio.dev/app/api-tokens
+            - name: ENVIO_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: envio-token
+                  key: token
+
+            - name: ENVIO_INDEXER_PORT
+              value: "9898"
+          ports:
+            - name: metrics
+              containerPort: 9898
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

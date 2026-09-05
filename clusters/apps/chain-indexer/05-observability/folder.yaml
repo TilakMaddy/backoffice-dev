@@ -1,0 +1,11 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: ${APP_CHAIN_INDEXER_GRAFANA_FOLDER}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  title: Chain Indexer
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true

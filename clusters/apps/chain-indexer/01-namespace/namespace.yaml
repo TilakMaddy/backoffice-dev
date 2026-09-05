@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: movies-db
+  name: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
     oatlabs.oatmilk.work/gateway-access: "true"
     oatlabs.oatmilk.work/zone-certificate-tls: "true"

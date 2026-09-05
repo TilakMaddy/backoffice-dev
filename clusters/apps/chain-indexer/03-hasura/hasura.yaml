@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: Secret
+type: Opaque
+metadata:
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+stringData:
+  HASURA_GRAPHQL_ADMIN_SECRET: admin123
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+  labels:
+    app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  template:
+    metadata:
+      labels:
+        app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+    spec:
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        node-role.kubernetes.io/general: ""
+      topologySpreadConstraints:
+        - topologyKey: topology.kubernetes.io/zone
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+      volumes:
+        - name: pg-ca
+          secret:
+            secretName: ${APP_CHAIN_INDEXER_PG_CLUSTER}-ca
+            items:
+              - key: ca.crt
+                path: ca.crt
+      containers:
+        - name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+          image: hasura/graphql-engine:v2.50.1
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - secretRef:
+                name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
+          env:
+            - name: PG_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: username
+            - name: PG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+                  key: password
+            - name: HASURA_GRAPHQL_DATABASE_URL
+              value: postgres://$(PG_USER):$(PG_PASSWORD)@${APP_CHAIN_INDEXER_PG_CLUSTER}-rw.${APP_CHAIN_INDEXER_NAMESPACE}.svc.cluster.local:5432/${APP_CHAIN_INDEXER_DB_NAME}?sslmode=verify-full&sslrootcert=/etc/ssl/pg/ca.crt
+            - name: HASURA_GRAPHQL_ENABLE_CONSOLE
+              value: "true"
+            - name: HASURA_GRAPHQL_DEV_MODE
+              value: "false"
+            - name: HASURA_GRAPHQL_ENABLE_TELEMETRY
+              value: "false"
+            # Entity ids and uint256 values exceed IEEE-754; without this they
+            # are returned as JSON numbers and silently lose precision.
+            - name: HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES
+              value: "true"
+            - name: HASURA_GRAPHQL_NO_OF_RETRIES
+              value: "10"
+          ports:
+            - name: http
+              containerPort: ${APP_CHAIN_INDEXER_HASURA_PORT}
+          volumeMounts:
+            - name: pg-ca
+              mountPath: /etc/ssl/pg
+              readOnly: true
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  selector:
+    app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  ports:
+    - name: http
+      port: ${APP_CHAIN_INDEXER_HASURA_PORT}
+      targetPort: http

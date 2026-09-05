@@ -9,6 +9,31 @@ data:
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
+  OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
+  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
+  INDEXER_IMAGE_PULL_POLICY: Always
+  INDEXER_KEEL_POLICY: force
+  INDEXER_KEEL_TRIGGER: manual
+  INDEXER_KEEL_POLL_INTERVAL: 1m
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: common
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
+  path: ./clusters/common
+  prune: true
+  wait: true
+  dependsOn:
+    - name: bootstrap
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -17,12 +42,15 @@ metadata:
   name: apps
   namespace: flux-system
 spec:
-  interval: 10m0s
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
   path: ./clusters/apps
   prune: true
   wait: true
   dependsOn:
-    - name: bootstrap
+    - name: common
+    - name: observability-operators
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -32,4 +60,33 @@ spec:
     substituteFrom:
       - kind: ConfigMap
         name: cluster-vars
+      - kind: ConfigMap
+        name: chain-indexer-vars
+
 ---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
+  path: ./clusters/packages/layer-zero/platform/observability
+  prune: true
+  wait: true
+  dependsOn:
+    - name: bootstrap
+  sourceRef:
+    kind: GitRepository
+    name: platform-foundation
+  postBuild:
+    substitute:
+      CLUSTER_CONFIG: platform-vars
+      PLATFORM_SOURCE: platform-foundation
+      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+      PLATFORM_NAMESPACE: platform-system
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars

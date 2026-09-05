@@ -1,10 +1,15 @@
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: movies-db
-  namespace: movies-db
+  name: ${APP_CHAIN_INDEXER_PG_CLUSTER}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   instances: ${PG_INSTANCES}
+
+  enableSuperuserAccess: true
+
+  monitoring:
+    enablePodMonitor: true
 
   resources:
     requests:
@@ -39,37 +44,9 @@ spec:
   imageCatalogRef:
     apiGroup: postgresql.cnpg.io
     kind: ClusterImageCatalog
-    name: movies-db-postgresql-minimal-trixie
-    major: 18
+    name: ${APP_CHAIN_INDEXER_PG_CATALOG}
+    major: ${APP_CHAIN_INDEXER_PG_MAJOR}
 
   bootstrap:
     initdb:
       dataChecksums: true
-
----
-apiVersion: postgresql.cnpg.io/v1
-kind: DatabaseRole
-metadata:
-  name: testing-role
-  namespace: movies-db
-spec:
-  cluster:
-    name: movies-db
-  name: user123 # must match
-  login: true
-  passwordSecret:
-    name: my-pass
-
-
----
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/basic-auth
-metadata:
-  name: my-pass
-  namespace: movies-db
-  labels:
-    cnpg.io/reload: "true"
-data:
-  username: dXNlcjEyMw== #user123
-  password: cGFzczEyMw== #pass123

@@ -1,0 +1,28 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: DatabaseRole
+metadata:
+  name: ${APP_CHAIN_INDEXER_DB_ROLE}-role
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  cluster:
+    name: ${APP_CHAIN_INDEXER_PG_CLUSTER}
+  name: ${APP_CHAIN_INDEXER_DB_ROLE} # must match
+  login: true
+  databaseRoleReclaimPolicy: delete
+  passwordSecret:
+    name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/basic-auth
+metadata:
+  name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+  labels:
+    cnpg.io/reload: "true"
+stringData:
+  username: ${APP_CHAIN_INDEXER_DB_ROLE}
+  password: pass123
+
+---

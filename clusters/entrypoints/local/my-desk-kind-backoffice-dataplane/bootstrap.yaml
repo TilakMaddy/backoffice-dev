@@ -4,10 +4,10 @@ metadata:
   name: platform-vars
   namespace: flux-system
 data:
-  CLUSTER_NAME: us-west-2-aws-backoffice-dataplane
-  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
+  CLUSTER_NAME: backoffice-dataplane
+  CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
   ACME_EMAIL: tilak.madichetti@gmail.com
-  ACME_ENV: production # staging | production
+  ACME_ENV: staging # staging | production
   OP_VAULT: OatLabs
   OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
   OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
@@ -19,9 +19,9 @@ data:
   ALERT_EMAIL_TO: tilak.madichetti@gmail.com
   GRAFANA_ADMIN_USER: admin
   GRAFANA_ADMIN_PASSWORD: pass123
-  FLUX_INTERVAL: 5m0s
-  FLUX_RETRY_INTERVAL: 1m0s
-  FLUX_TIMEOUT: 5m0s
+  FLUX_INTERVAL: 30s
+  FLUX_RETRY_INTERVAL: 15s
+  FLUX_TIMEOUT: 1m0s
   ENVOY_REPLICAS: "3"
   SHIM_REPLICAS: "3"
 
@@ -32,9 +32,9 @@ metadata:
   name: platform-foundation
   namespace: flux-system
 spec:
-  interval: 1m0s
+  interval: 30s
   ref:
-    branch: production
+    branch: tilak/feat/add-hasura
   secretRef:
     name: flux-system
   recurseSubmodules: true
@@ -47,9 +47,9 @@ metadata:
   name: bootstrap
   namespace: flux-system
 spec:
-  interval: 5m0s
-  retryInterval: 1m0s
-  timeout: 5m0s
+  interval: 30s
+  retryInterval: 15s
+  timeout: 1m0s
   path: ./clusters/packages/layer-zero/platform/bootstrap
   prune: true
   wait: true
