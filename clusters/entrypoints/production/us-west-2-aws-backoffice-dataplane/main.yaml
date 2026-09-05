@@ -5,6 +5,10 @@ metadata:
   namespace: flux-system
 data:
   CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
+  PLATFORM_NAMESPACE: platform-system
+  FLUX_INTERVAL: 5m0s
+  FLUX_RETRY_INTERVAL: 1m0s
+  FLUX_TIMEOUT: 5m0s
   PG_INSTANCES: "3"
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi
@@ -57,8 +61,6 @@ spec:
     kind: GitRepository
     name: flux-system
   postBuild:
-    substitute:
-      PLATFORM_NAMESPACE: platform-system
     substituteFrom:
       - kind: ConfigMap
         name: cluster-vars
