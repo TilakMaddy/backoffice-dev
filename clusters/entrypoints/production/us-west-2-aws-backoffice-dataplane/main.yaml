@@ -10,6 +10,9 @@ data:
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
   OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
+  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: ChainIndexerPG-production/password
+  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: ChainIndexerPGSuperuser-production/password
+  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: Hasura-production/admin_secret
   INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force
@@ -84,6 +87,7 @@ spec:
   postBuild:
     substitute:
       CLUSTER_CONFIG: platform-vars
+      CLUSTER_SECRET_CONFIG: platform-secret-vars
       PLATFORM_SOURCE: platform-foundation
       PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
       PLATFORM_NAMESPACE: platform-system

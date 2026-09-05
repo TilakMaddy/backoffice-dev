@@ -7,6 +7,8 @@ spec:
   instances: ${PG_INSTANCES}
 
   enableSuperuserAccess: true
+  superuserSecret:
+    name: ${APP_CHAIN_INDEXER_PG_CLUSTER}-superuser-pass
 
   monitoring:
     enablePodMonitor: true

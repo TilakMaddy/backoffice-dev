@@ -1,11 +1,20 @@
-apiVersion: v1
-kind: Secret
-type: Opaque
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
-stringData:
-  HASURA_GRAPHQL_ADMIN_SECRET: admin123
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
+    creationPolicy: Owner
+  data:
+    - secretKey: HASURA_GRAPHQL_ADMIN_SECRET
+      remoteRef:
+        key: ${OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET}
 
 ---
 apiVersion: apps/v1

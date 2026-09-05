@@ -13,16 +13,61 @@ spec:
     name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
 
 ---
-apiVersion: v1
-kind: Secret
-type: kubernetes.io/basic-auth
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
 metadata:
   name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
-  labels:
-    cnpg.io/reload: "true"
-stringData:
-  username: ${APP_CHAIN_INDEXER_DB_ROLE}
-  password: pass123
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: ${APP_CHAIN_INDEXER_DB_ROLE}-pass
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      type: kubernetes.io/basic-auth
+      metadata:
+        labels:
+          cnpg.io/reload: "true"
+      data:
+        username: ${APP_CHAIN_INDEXER_DB_ROLE}
+        password: "{{ .password }}"
+  data:
+    - secretKey: password
+      remoteRef:
+        key: ${OP_VAULT_CHAIN_INDEXER_PG_PASSWORD}
+
+---
+# `postgres` is reserved from declarative role management, so the operator takes
+# its password from spec.superuserSecret rather than a DatabaseRole.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ${APP_CHAIN_INDEXER_PG_CLUSTER}-superuser-pass
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: ${APP_CHAIN_INDEXER_PG_CLUSTER}-superuser-pass
+    creationPolicy: Owner
+    template:
+      engineVersion: v2
+      type: kubernetes.io/basic-auth
+      metadata:
+        labels:
+          cnpg.io/reload: "true"
+      data:
+        username: postgres
+        password: "{{ .password }}"
+  data:
+    - secretKey: password
+      remoteRef:
+        key: ${OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD}
 
 ---
