@@ -13,6 +13,8 @@ data:
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
+  CHAIN_INDEXER_HASURA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
+  CHAIN_INDEXER_PG_ALLOWED_PRINCIPALS: '[{"remote_ip": {"address_prefix": "0.0.0.0", "prefix_len": 0}}]'
   OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
   OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: ChainIndexerPG-local/password
   OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: ChainIndexerPGSuperuser-local/password
