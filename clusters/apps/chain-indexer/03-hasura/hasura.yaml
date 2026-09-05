@@ -24,6 +24,9 @@ metadata:
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
   labels:
     app: ${APP_CHAIN_INDEXER_HASURA_SVC}
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: Merge
+    reloader.stakater.com/auto: "true"
 spec:
   replicas: 2
   selector:
