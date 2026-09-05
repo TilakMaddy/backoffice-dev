@@ -53,7 +53,6 @@ spec:
   wait: true
   dependsOn:
     - name: common
-    - name: observability-operators
   sourceRef:
     kind: GitRepository
     name: flux-system

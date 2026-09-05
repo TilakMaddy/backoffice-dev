@@ -17,9 +17,6 @@ data:
   GRAFANA_SMTP_USER: resend
   GRAFANA_SMTP_FROM_ADDRESS: alerts@backoffice.oatmilk.work
   ALERT_EMAIL_TO: tilak.madichetti@gmail.com
-  FLUX_INTERVAL: 5m0s
-  FLUX_RETRY_INTERVAL: 1m0s
-  FLUX_TIMEOUT: 5m0s
   ENVOY_REPLICAS: "3"
   SHIM_REPLICAS: "3"
 
@@ -56,11 +53,11 @@ spec:
     name: platform-foundation
   postBuild:
     substitute:
-      CLUSTER_CONFIG: platform-vars
-      CLUSTER_SECRET_CONFIG: platform-secret-vars
       PLATFORM_SOURCE: platform-foundation
       PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
       PLATFORM_NAMESPACE: platform-system
-    substituteFrom:
-      - kind: ConfigMap
-        name: platform-vars
+      CLUSTER_CONFIG: platform-vars
+      CLUSTER_SECRET_CONFIG: platform-secret-vars
+      FLUX_INTERVAL: 5m0s
+      FLUX_RETRY_INTERVAL: 1m0s
+      FLUX_TIMEOUT: 5m0s
