@@ -36,7 +36,7 @@ metadata:
 spec:
   interval: 30s
   ref:
-    branch: tilak/feat/add-hasura
+    branch: dev
   secretRef:
     name: flux-system
   recurseSubmodules: true
