@@ -20,10 +20,10 @@ data:
   PG_BACKUP_SCHEDULE: "0 0 3 * * *"
   CHAIN_INDEXER_HASURA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
   CHAIN_INDEXER_PG_ALLOWED_PRINCIPALS: '[{"remote_ip": {"address_prefix": "0.0.0.0", "prefix_len": 0}}]'
-  OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
-  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: ChainIndexerPG-production/password
-  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: ChainIndexerPGSuperuser-production/password
-  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: Hasura-production/admin_secret
+  OP_VAULT_ENVIO_TOKEN: production/envio-token
+  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: production/chain-indexer-pg-password
+  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: production/chain-indexer-pg-superuser-password
+  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: production/chain-indexer-hasura-admin-secret
   INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force

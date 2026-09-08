@@ -12,10 +12,10 @@ data:
   ACME_EMAIL: tilak.madichetti@gmail.com
   ACME_ENV: staging # staging | production
   OP_VAULT: OatLabs
-  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
-  OP_VAULT_GRAFANA_ADMIN_USER: Grafana-staging/username
-  OP_VAULT_GRAFANA_ADMIN_PASSWORD: Grafana-staging/password
-  OP_VAULT_RESEND_SMTP_PASSWORD: Resend/password
+  OP_VAULT_CLOUDFLARE_TOKEN: staging/cloudflare-api-token
+  OP_VAULT_GRAFANA_ADMIN_USER: staging/grafana-admin-username
+  OP_VAULT_GRAFANA_ADMIN_PASSWORD: staging/grafana-admin-password
+  OP_VAULT_RESEND_SMTP_PASSWORD: staging/resend-smtp-password
   GRAFANA_SMTP_HOST: smtp.resend.com:587
   GRAFANA_SMTP_USER: resend
   GRAFANA_SMTP_FROM_ADDRESS: alerts@backoffice.oatmilk.work
