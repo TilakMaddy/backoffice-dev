@@ -4,22 +4,27 @@ metadata:
   name: platform-vars
   namespace: flux-system
 data:
-  PLATFORM_SOURCE: platform-foundation
-  PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
-  PLATFORM_NAMESPACE: platform-system
-  TXT_OWNER_ID: my-desk-kind-backoffice-dataplane
+  # yours
   CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
-  ACME_EMAIL: tilak.madichetti@gmail.com
-  ACME_ENV: staging # staging | production
-  OP_VAULT: OatLabs
+  TXT_OWNER_ID: my-desk-kind-backoffice-dataplane
+
+  # vault
+  OP_VAULT: MyIndexer
+  OP_VAULT_ACME_EMAIL: local/acme-email
+  OP_VAULT_ALERT_EMAIL_TO: local/alert-email-to
   OP_VAULT_CLOUDFLARE_TOKEN: local/cloudflare-api-token
   OP_VAULT_GRAFANA_ADMIN_USER: local/grafana-admin-username
   OP_VAULT_GRAFANA_ADMIN_PASSWORD: local/grafana-admin-password
+  OP_VAULT_GRAFANA_SMTP_HOST: local/grafana-smtp-host
+  OP_VAULT_GRAFANA_SMTP_USER: local/grafana-smtp-user
+  OP_VAULT_GRAFANA_SMTP_FROM_ADDRESS: local/grafana-smtp-from-address
   OP_VAULT_RESEND_SMTP_PASSWORD: local/resend-smtp-password
-  GRAFANA_SMTP_HOST: smtp.resend.com:587
-  GRAFANA_SMTP_USER: resend
-  GRAFANA_SMTP_FROM_ADDRESS: alerts@backoffice.oatmilk.work
-  ALERT_EMAIL_TO: tilak.madichetti@gmail.com
+
+  # common
+  PLATFORM_SOURCE: platform-foundation
+  PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+  PLATFORM_NAMESPACE: platform-system
+  ACME_ENV: staging # staging | production
   GRAFANA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
   FLUX_INTERVAL: 30s
   FLUX_RETRY_INTERVAL: 15s

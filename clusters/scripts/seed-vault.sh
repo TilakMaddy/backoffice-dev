@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-vault="${OP_VAULT:-OatLabs}"
+vault="${OP_VAULT:-MyIndexer}"
 
 envs=(
     local
@@ -13,6 +13,11 @@ fields=(
     cloudflare-api-token
     resend-smtp-password
     envio-token
+    acme-email
+    alert-email-to
+    grafana-smtp-host
+    grafana-smtp-user
+    grafana-smtp-from-address
     grafana-admin-username
     grafana-admin-password
     chain-indexer-pg-password
@@ -20,11 +25,15 @@ fields=(
     chain-indexer-hasura-admin-secret
 )
 
-# Issued by a third party; only a human can supply them.
+# Issued by a third party, or naming a person or a domain; only a human can
+# supply them.
 external_fields=(
     cloudflare-api-token
     resend-smtp-password
     envio-token
+    acme-email
+    alert-email-to
+    grafana-smtp-from-address
 )
 
 main() {
@@ -99,8 +108,14 @@ value_for() {
     local env_name="$1" field="$2"
 
     case "$field" in
-        cloudflare-api-token|resend-smtp-password|envio-token)
+        cloudflare-api-token|resend-smtp-password|envio-token|acme-email|alert-email-to|grafana-smtp-from-address)
             printf 'REPLACE_ME-%s-%s' "$env_name" "$field"
+            ;;
+        grafana-smtp-host)
+            printf 'smtp.resend.com:587'
+            ;;
+        grafana-smtp-user)
+            printf 'resend'
             ;;
         grafana-admin-username)
             printf 'admin'

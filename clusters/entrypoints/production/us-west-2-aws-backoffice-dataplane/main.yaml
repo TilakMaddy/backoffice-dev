@@ -4,7 +4,19 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
+  # yours
   CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
+  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
+  PG_BACKUP_DESTINATION: s3://oatlabs-backoffice-pg-backups-production/
+  PG_BACKUP_REGION: us-west-2
+
+  # vault
+  OP_VAULT_ENVIO_TOKEN: production/envio-token
+  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: production/chain-indexer-pg-password
+  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: production/chain-indexer-pg-superuser-password
+  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: production/chain-indexer-hasura-admin-secret
+
+  # common
   PLATFORM_NAMESPACE: platform-system
   FLUX_INTERVAL: 5m0s
   FLUX_RETRY_INTERVAL: 1m0s
@@ -14,17 +26,10 @@ data:
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
   PG_BACKUPS_ENABLED: "true"
-  PG_BACKUP_DESTINATION: s3://oatlabs-backoffice-pg-backups-production/
-  PG_BACKUP_REGION: us-west-2
   PG_BACKUP_RETENTION: 5d
   PG_BACKUP_SCHEDULE: "0 0 3 * * *"
   CHAIN_INDEXER_HASURA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
   CHAIN_INDEXER_PG_ALLOWED_PRINCIPALS: '[{"remote_ip": {"address_prefix": "0.0.0.0", "prefix_len": 0}}]'
-  OP_VAULT_ENVIO_TOKEN: production/envio-token
-  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: production/chain-indexer-pg-password
-  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: production/chain-indexer-pg-superuser-password
-  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: production/chain-indexer-hasura-admin-secret
-  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force
   INDEXER_KEEL_TRIGGER: poll
