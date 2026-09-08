@@ -128,6 +128,16 @@ output "kubeconfigs" {
   sensitive   = true
 }
 
+output "pg_backups_destination" {
+  description = "The PG_BACKUP_DESTINATION for the flux entrypoint of this namespace."
+  value       = "s3://${local.pg_backups_bucket}/"
+}
+
+output "pg_backups_region" {
+  description = "The PG_BACKUP_REGION for the flux entrypoint of this namespace."
+  value       = local.region
+}
+
 terraform {
   required_version = ">= 1.9"
 

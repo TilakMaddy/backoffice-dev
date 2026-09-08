@@ -7,6 +7,7 @@ data:
   # yours
   CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
   INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
+  # just backup-vars, in infra/production
   PG_BACKUP_DESTINATION: s3://oatlabs-backoffice-pg-backups-production/
   PG_BACKUP_REGION: us-west-2
 
