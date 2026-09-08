@@ -7,3 +7,11 @@ data:
   CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
   TXT_OWNER_ID: my-desk-kind-backoffice-dataplane
   OP_VAULT: MyIndexer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-owner-vars
+  namespace: flux-system
+data:
+  INDEXER_IMAGE_NAME: my-envio-indexer:local
