@@ -4,12 +4,7 @@ metadata:
   name: platform-vars
   namespace: flux-system
 data:
-  # yours
-  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work
-  TXT_OWNER_ID: staging-us-west-2-aws-backoffice-dataplane
-
   # vault
-  OP_VAULT: MyIndexer
   OP_VAULT_ACME_EMAIL: staging/acme-email
   OP_VAULT_ALERT_EMAIL_TO: staging/alert-email-to
   OP_VAULT_CLOUDFLARE_TOKEN: staging/cloudflare-api-token
@@ -67,3 +62,5 @@ spec:
     substituteFrom:
       - kind: ConfigMap
         name: platform-vars
+      - kind: ConfigMap
+        name: platform-owner-vars

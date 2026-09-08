@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-owner-vars
+  namespace: flux-system
+data:
+  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:staging
+  # just backup-vars, in infra/staging
+  PG_BACKUP_DESTINATION: s3://oatlabs-backoffice-pg-backups-staging/
+  PG_BACKUP_REGION: us-west-2

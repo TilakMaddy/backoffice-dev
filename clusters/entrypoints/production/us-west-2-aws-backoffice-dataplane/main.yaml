@@ -4,13 +4,6 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
-  # yours
-  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
-  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:production
-  # just backup-vars, in infra/production
-  PG_BACKUP_DESTINATION: s3://oatlabs-backoffice-pg-backups-production/
-  PG_BACKUP_REGION: us-west-2
-
   # vault
   OP_VAULT_ENVIO_TOKEN: production/envio-token
   OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: production/chain-indexer-pg-password
@@ -76,6 +69,10 @@ spec:
   postBuild:
     substituteFrom:
       - kind: ConfigMap
+        name: platform-owner-vars
+      - kind: ConfigMap
         name: cluster-vars
+      - kind: ConfigMap
+        name: cluster-owner-vars
       - kind: ConfigMap
         name: chain-indexer-vars

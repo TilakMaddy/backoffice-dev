@@ -1,21 +1,27 @@
 FluxCD entrypoints for various clusters.
 
-Each `<env>/<cluster>` holds `bootstrap.yaml` (the `platform-vars` ConfigMap +
-the layer-zero source and Kustomization) and `main.yaml` (the `cluster-vars`
-ConfigMap + the common and apps Kustomizations). Both ConfigMaps group their
-keys the same way:
+Each `<env>/<cluster>` holds four ConfigMaps across four files, plus the flux
+Kustomizations that consume them:
 
-- `# yours` -- identity that has to live in git, because flux reads it before
-  the vault is reachable. Domain, cluster id, image repository, backup bucket.
-- `# vault` -- the 1Password vault name and the `op://<vault>/<env>/<field>`
-  paths behind it. The field names are fixed by `scripts/seed-vault.sh`; only
-  `OP_VAULT` and the `<env>` prefixes are yours to pick. Emails and the SMTP
-  provider live here, not in git.
-- `# common` -- platform wiring and tunables. Runs as-is.
+| file | ConfigMap | |
+|---|---|---|
+| `platform-owner-vars.yaml` | `platform-owner-vars` | yours: zone, cluster id, vault name |
+| `cluster-owner-vars.yaml` | `cluster-owner-vars` | yours: indexer image, backup bucket |
+| `bootstrap.yaml` | `platform-vars` | vault paths and platform wiring, plus the layer-zero source and Kustomization |
+| `main.yaml` | `cluster-vars` | vault paths and tunables, plus the common and apps Kustomizations |
 
-Outside the ConfigMaps, a new owner also changes the `GitRepository` url and
-branch in `bootstrap.yaml`. `chain-indexer-vars`, the third ConfigMap the apps
-Kustomization substitutes from, lives in `clusters/common`.
+A new owner edits the two `*-owner-vars.yaml` files and the `GitRepository` url
+and branch in `bootstrap.yaml`. Everything else runs as-is.
+
+The vault name is in two places that have to agree: `OP_VAULT` in
+`platform-owner-vars.yaml`, and the default in `scripts/seed-vault.sh`.
+
+The `OP_VAULT_*` values in `platform-vars` and `cluster-vars` are addresses
+inside that vault. Their field names are fixed by `scripts/seed-vault.sh`; only
+the `<env>/` prefix is yours to pick.
+
+`chain-indexer-vars`, the fourth ConfigMap the apps Kustomization substitutes
+from, lives in `clusters/common`.
 
 Run it with:
 

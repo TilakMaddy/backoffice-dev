@@ -4,10 +4,6 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
-  # yours
-  CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
-  INDEXER_IMAGE_NAME: my-envio-indexer:local
-
   # vault
   OP_VAULT_ENVIO_TOKEN: local/envio-token
   OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: local/chain-indexer-pg-password
@@ -71,6 +67,10 @@ spec:
   postBuild:
     substituteFrom:
       - kind: ConfigMap
+        name: platform-owner-vars
+      - kind: ConfigMap
         name: cluster-vars
+      - kind: ConfigMap
+        name: cluster-owner-vars
       - kind: ConfigMap
         name: chain-indexer-vars
