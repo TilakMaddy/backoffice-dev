@@ -7,7 +7,7 @@ spec:
   interval: ${FLUX_INTERVAL}
   retryInterval: ${FLUX_RETRY_INTERVAL}
   timeout: ${FLUX_TIMEOUT}
-  path: ./clusters/variants/pg-backups/${PG_BACKUPS_ENABLED}
+  path: ./clusters/apps/chain-indexer/02-postgres/backups/${PG_BACKUPS_ENABLED}
   prune: true
   wait: true
   sourceRef:
