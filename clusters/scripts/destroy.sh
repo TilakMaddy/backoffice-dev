@@ -4,12 +4,13 @@ set -euo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
-# Reverse of the dependsOn chain, which spans three files: `apps` and
+# Reverse of the dependsOn chain, which spans four files: `common`, `apps` and
 # `bootstrap` are declared in clusters/entrypoints/<env>/<cluster>/{main,bootstrap}.yaml,
-# and everything between them in the layer-zero package under platform/.
+# `pg-backups` in clusters/apps/chain-indexer/02-postgres/backups.yaml, and everything
+# between them in the layer-zero package under platform/.
 # Children are deleted before their parent so each inventory is garbage-collected
 # in order rather than cascading out of a single prune.
-stages=(observability-instances observability-collectors apps observability-operators observability shims core base operators platform secrets-eso secrets-operators secrets bootstrap)
+stages=(observability-instances observability-collectors pg-backups apps common observability-operators observability shims core base operators underlay secrets-eso secrets-operators secrets bootstrap)
 
 halt_reconciliation() {
     fx suspend source git flux-system
