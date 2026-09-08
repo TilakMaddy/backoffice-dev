@@ -136,3 +136,29 @@ Refer
 **DO NOT SKIP**. 
 
 A stale `kubernetes_version` in `config.json` can roll the control plane backwards the next time anything regenerates the machine config. Always manually upgrade the `talos_version` / `kubernetes_version` in `config.json` to match what the cluster runs.
+
+## Postgres backups
+
+`main.tf` creates `oatlabs-backoffice-pg-backups-production` and attaches a policy scoped to it onto the
+instance-profile roles of the three `postgres` workers (`node-1`, `node-2`,
+`node-3` in `config.json`). The CNPG barman-cloud sidecar authenticates through
+IMDSv2 with no stored credential.
+
+These are Talos clusters, not EKS, so there is no OIDC provider and no IRSA — the
+node instance profile is the only AWS identity a pod can hold. Every pod on those
+three nodes can therefore read and write the backup bucket. They carry
+`node-role.kubernetes.io/postgres:NoSchedule` registration taints and only the
+CNPG cluster tolerates them, which is what keeps that set to the Postgres pods.
+
+The node names are listed in `local.postgres_nodes`, and the role names are
+derived from `<namespace>/<cluster name>` the same way the module derives them. A
+`data "aws_iam_role"` lookup sits in front of the attachment, so a naming change
+upstream fails the plan naming the role it looked for rather than silently
+attaching nothing.
+
+## Module source
+
+`main.tf` sources `terraform-aws-k8s-lima` from a local checkout at
+`/Users/tilakmadichetti/Code/oatlabs/terraform-aws-k8s-lima`, not from the registry, so
+there is no pinned `version`. The `namespace` field this `config.json` declares is not in
+a published release yet.

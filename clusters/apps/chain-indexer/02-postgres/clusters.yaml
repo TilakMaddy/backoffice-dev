@@ -52,3 +52,10 @@ spec:
   bootstrap:
     initdb:
       dataChecksums: true
+
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      enabled: ${PG_BACKUPS_ENABLED}
+      isWALArchiver: ${PG_BACKUPS_ENABLED}
+      parameters:
+        barmanObjectName: ${APP_CHAIN_INDEXER_PG_OBJECT_STORE}
