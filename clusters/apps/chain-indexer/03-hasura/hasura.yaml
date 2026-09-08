@@ -4,7 +4,7 @@ metadata:
   name: ${APP_CHAIN_INDEXER_HASURA_SVC}-env
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  refreshInterval: 1h
+  refreshInterval: 15m
   secretStoreRef:
     kind: ClusterSecretStore
     name: onepassword

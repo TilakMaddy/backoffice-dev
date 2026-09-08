@@ -31,7 +31,7 @@ metadata:
   name: envio-token
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  refreshInterval: 1h
+  refreshInterval: 15m
   secretStoreRef:
     kind: ClusterSecretStore
     name: onepassword
