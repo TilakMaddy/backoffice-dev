@@ -7,7 +7,7 @@ data:
   PLATFORM_SOURCE: platform-foundation
   PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
   PLATFORM_NAMESPACE: platform-system
-  CLUSTER_NAME: us-west-2-aws-backoffice-dataplane
+  TXT_OWNER_ID: production-us-west-2-aws-backoffice-dataplane
   CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-production.oatmilk.work
   ACME_EMAIL: tilak.madichetti@gmail.com
   ACME_ENV: production # staging | production
