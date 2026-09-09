@@ -7,6 +7,30 @@ set -euo pipefail
 # shellcheck source-path=SCRIPTDIR source=lib.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
+# `just destroy` suspends the git sources and the root kustomization so flux stops
+# syncing while the stages come down, and nothing ever clears that. `flux bootstrap`
+# applies server-side, which will not unset a spec.suspend owned by another field
+# manager, so bootstrapping a cluster that was previously destroyed fails its health
+# checks with "is suspended". Clear it first, when the objects are there at all.
+resume_if_suspended() {
+    local kind="$1" name="$2" suspended
+    shift 2
+
+    suspended="$(kc get "$kind" "$name" -n flux-system \
+        -o jsonpath='{.spec.suspend}' 2>/dev/null || true)"
+
+    if [[ "$suspended" == "true" ]]; then
+        log "  resuming suspended $kind/$name"
+        fx resume "$@" "$name"
+    fi
+}
+
+resume_halted_reconciliation() {
+    resume_if_suspended gitrepository flux-system source git
+    resume_if_suspended gitrepository platform-foundation source git
+    resume_if_suspended kustomization flux-system kustomization
+}
+
 main() {
     local start_epoch end_epoch elapsed
     local owner repository branch origin
@@ -40,6 +64,9 @@ main() {
       --namespace="$vault_namespace" \
       --from-literal=token="$OP_SERVICE_ACCOUNT_TOKEN" \
       --dry-run=client -o yaml | kc apply -f -
+
+    log "Resuming anything a previous destroy left suspended"
+    resume_halted_reconciliation
 
     log "Creating Github repository and bootstrapping flux system"
 

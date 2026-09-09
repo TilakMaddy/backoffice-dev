@@ -87,6 +87,53 @@ assert_cloud_resources_released() {
     done
 }
 
+# Namespaces the platform and its apps create. Each is declared in a manifest, so
+# deleting the stage that owns it should prune it; anything still standing at the
+# end is reported rather than left silently behind.
+namespaces=(platform-system chain-indexer alloy-system cert-manager-system cnpg-system envoy-gateway-system external-dns-system external-secrets-system grafana-system keel-system kyverno-system loki-system prometheus-system reloader-system tempo-system)
+
+# Deleting the stages leaves flux itself: the controllers, the toolkit CRDs, the
+# flux-system namespace and the suspended sources. Removing them is what makes the
+# next bootstrap behave like one against a cluster that has never seen flux.
+uninstall_flux() {
+    if ! kc get namespace flux-system >/dev/null 2>&1; then
+        log "  flux-system: already gone"
+        return 0
+    fi
+    fx uninstall --silent
+}
+
+# bootstrap.sh seeds the 1Password token before flux exists, so that namespace can
+# outlive the stage that would otherwise own it.
+remove_bootstrap_leftovers() {
+    local ns=external-secrets-system
+
+    if ! kc get namespace "$ns" >/dev/null 2>&1; then
+        log "  $ns: already gone"
+        return 0
+    fi
+
+    log "  deleting leftover namespace $ns"
+    kc delete namespace "$ns" --timeout=5m
+}
+
+report_remaining_namespaces() {
+    local ns remaining=()
+
+    for ns in "${namespaces[@]}" flux-system; do
+        kc get namespace "$ns" >/dev/null 2>&1 && remaining+=("$ns")
+    done
+
+    if [[ ${#remaining[@]} -eq 0 ]]; then
+        log "  none left, the cluster is back to what it was before bootstrap"
+        return 0
+    fi
+
+    printf 'warning: %d namespace(s) still present:\n' "${#remaining[@]}" >&2
+    printf '         %s\n' "${remaining[@]}" >&2
+    printf '         a namespace stuck Terminating is usually a finalizer on one of its resources\n' >&2
+}
+
 main() {
     local start_epoch end_epoch elapsed
 
@@ -106,14 +153,23 @@ main() {
     log "Force-wiping any remaining PVCs and LoadBalancer Services"
     wipe_leftovers
 
+    log "Uninstalling flux -- controllers, toolkit CRDs and the flux-system namespace"
+    uninstall_flux
+
+    log "Removing what bootstrap created outside flux"
+    remove_bootstrap_leftovers
+
     log "Verifying every cloud-backed resource is released"
     assert_cloud_resources_released
+
+    log "Checking no platform namespace survived"
+    report_remaining_namespaces
 
     end_epoch=$(date +%s)
     elapsed=$(( end_epoch - start_epoch ))
     log "End time:   $(date -r "$end_epoch" '+%Y-%m-%d %H:%M:%S %Z')"
     log "Elapsed:    $((elapsed / 3600))h $(((elapsed % 3600) / 60))m $((elapsed % 60))s (${elapsed}s)"
-    log "Safe to run terraform destroy"
+    log "Cluster is empty again. Safe to run terraform destroy, or to bootstrap it afresh"
 }
 
 main "$@"
