@@ -30,3 +30,8 @@ hasura-staging query="{ chain_metadata { chain_id start_block block_height lates
         -H 'Content-Type: application/json' \
         "https://hasura-chain-indexer.{{ stg_zone }}/v1/graphql" \
     | jq .
+
+grafana-staging:
+    @op read 'op://MyIndexer/staging/grafana-admin-password' | tr -d '\n' | pbcopy
+    @echo "user $(op read 'op://MyIndexer/staging/grafana-admin-username') -- password copied to clipboard"
+    @open "https://grafana.{{ stg_zone }}"
