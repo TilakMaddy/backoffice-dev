@@ -16,6 +16,14 @@ bootstrap target="":
 destroy target="":
     ./scripts/destroy.sh {{ target }}
 
-psql env="staging" db="postgres-chain-indexer" dbname="indexer-db" zone="us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work":
-    @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/{{ env }}/chain-indexer-pg-superuser-password')}" \
+psql-staging db="postgres-chain-indexer" dbname="indexer-db" zone="us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work":
+    @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')}" \
     psql "host={{ db }}.{{ zone }} port=5432 user=postgres dbname={{ dbname }} sslmode=verify-full sslrootcert=tests/stg-root-x1.pem"
+
+hasura-staging query host="hasura-chain-indexer" zone="us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work":
+    @jq -nc --arg q {{ quote(query) }} '{query:$q}' \
+    | curl -sS --cacert tests/stg-root-x1.pem -d @- \
+        -H "x-hasura-admin-secret: ${HASURA_ADMIN_SECRET:-$(op read 'op://MyIndexer/staging/chain-indexer-hasura-admin-secret')}" \
+        -H 'Content-Type: application/json' \
+        "https://{{ host }}.{{ zone }}/v1/graphql" \
+    | jq .
