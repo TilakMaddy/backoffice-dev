@@ -3,6 +3,12 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+# Seeding writes; the service account is provisioned read-only so External
+# Secrets can only read. Running under `openv` (op run --env-file=.env) puts its
+# token in the environment and every write comes back "Couldn't update the
+# item.", so drop it and authenticate as the human who owns the vault.
+unset OP_SERVICE_ACCOUNT_TOKEN
+
 # The vault name is the one owner value that cannot live in the vault, so the
 # entrypoints hold it and this reads it back from them rather than keeping a
 # second copy. Every entrypoint has to name the same vault.
@@ -222,9 +228,10 @@ fail_write() {
         done
     fi
 
-    printf '\n       op vault get only proves read access, so a write can still fail on:\n' >&2
-    printf '         - an expired session or lost write access: op whoami, then op signin\n' >&2
-    printf '         - read-only access to %s, or a service account without write\n' "$vault" >&2
+    printf '\n       writing as: %s\n' "$(op whoami 2>/dev/null | tr '\n' ' ' | tr -s ' ' || true)" >&2
+    printf '       op vault get only proves read access, so a write can still fail on:\n' >&2
+    printf '         - read-only access to %s for that account\n' "$vault" >&2
+    printf '         - an expired session: op whoami, then op signin\n' >&2
     printf '         - a field label that collides with an existing one on the item\n' >&2
     printf '       inspect: op item get %s --vault %s --format=json\n' "$env_name" "$vault" >&2
     exit 1
