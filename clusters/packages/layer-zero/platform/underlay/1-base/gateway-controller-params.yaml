@@ -9,6 +9,11 @@ spec:
     kubernetes:
       envoyDeployment:
         replicas: ${ENVOY_REPLICAS}
+        strategy:
+          type: RollingUpdate
+          rollingUpdate:
+            maxUnavailable: 1
+            maxSurge: 0
         container:
           resources:
             requests:
