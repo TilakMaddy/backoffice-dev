@@ -102,6 +102,24 @@
           "roles": [
             "observability"
           ]
+        },
+        "node-5": {
+          "instance_type": "c7i-flex.large",
+          "root_volume_size": 30,
+          "monitoring": false,
+          "availability_zone": "us-west-2b",
+          "roles": [
+            "general"
+          ]
+        },
+        "node-6": {
+          "instance_type": "c7i-flex.large",
+          "root_volume_size": 30,
+          "monitoring": false,
+          "availability_zone": "us-west-2c",
+          "roles": [
+            "general"
+          ]
         }
       }
     }
