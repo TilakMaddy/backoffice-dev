@@ -41,6 +41,14 @@ spec:
       name: RetryOnFailure
       retryInterval: 5m
   values:
+    deployment:
+      envoyGateway:
+        resources:
+          requests:
+            cpu: 50m
+            memory: 96Mi
+          limits:
+            memory: 256Mi
     config:
       envoyGateway:
         extensionApis:
