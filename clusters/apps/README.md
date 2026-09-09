@@ -17,10 +17,17 @@ The empty one therefore hides `true/` and `false/` from `apps`, leaving the
 `apps` applies both variants at once.
 
 When `PG_BACKUPS_ENABLED` is `"true"` the cluster also requires
-`PG_BACKUP_DESTINATION`, `PG_BACKUP_REGION`, `PG_BACKUP_RETENTION` and
-`PG_BACKUP_SCHEDULE`. Only `02-postgres/backups/true/` reads them, so a cluster
-with backups off does not need them and local/kind does not declare them.
-Nothing validates this.
+`PG_BACKUP_RETENTION` and `PG_BACKUP_SCHEDULE` from `cluster-vars`, plus
+`PG_BACKUP_DESTINATION` and `PG_BACKUP_REGION` from the `cluster-secret-vars`
+Secret. Only `02-postgres/backups/true/` reads them, so a cluster with backups
+off does not need them. Nothing validates this.
+
+The destination and region are not hand-written anywhere: terraform creates the
+bucket and exposes them as outputs, `just seed-vault` copies those outputs into
+1Password on every run, and `clusters/common/cluster-secret-vars.yaml` pulls them
+back out. That is why they live in a Secret rather than in `cluster-vars` — not
+because they are sensitive, but so the value cannot drift from the bucket that
+exists.
 
 `PG_BACKUP_SCHEDULE` is a six-field cron — seconds first — so daily at 03:00 UTC
 is `0 0 3 * * *`.

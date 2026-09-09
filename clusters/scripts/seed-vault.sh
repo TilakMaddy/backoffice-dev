@@ -2,6 +2,7 @@
 set -euo pipefail
 
 vault="${OP_VAULT:-MyIndexer}"
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 envs=(
     local
@@ -23,6 +24,15 @@ fields=(
     chain-indexer-pg-password
     chain-indexer-pg-superuser-password
     chain-indexer-hasura-admin-secret
+    pg-backup-destination
+    pg-backup-region
+)
+
+# Read from `terraform output` in infra/<env> on every run, so the bucket can
+# never drift from the one terraform created.
+terraform_fields=(
+    pg-backup-destination
+    pg-backup-region
 )
 
 # Issued by a third party, or naming a person or a domain; only a human can
@@ -47,6 +57,7 @@ main() {
     fi
 
     for env_name in "${envs[@]}"; do
+        resolve_terraform "$env_name"
         matches="$(count_items "$env_name")"
         case "$matches" in
             0) create "$env_name" ;;
@@ -90,6 +101,17 @@ backfill() {
     local assignments=()
 
     for field in "${fields[@]}"; do
+        # Terraform-backed fields are rewritten every run rather than left alone.
+        # When terraform could not be read, an existing value is kept and only a
+        # missing one is seeded, so the field always exists for External Secrets.
+        if is_terraform_field "$field"; then
+            if [[ "$tf_available" == yes ]] \
+                || [[ -z "$(op read "op://$vault/$env_name/$field" 2>/dev/null)" ]]; then
+                assignments+=("${field}[password]=$(value_for "$env_name" "$field")")
+            fi
+            continue
+        fi
+
         op read "op://$vault/$env_name/$field" >/dev/null 2>&1 && continue
         assignments+=("${field}[password]=$(value_for "$env_name" "$field")")
     done
@@ -101,7 +123,41 @@ backfill() {
 
     op item edit "$env_name" --vault "$vault" "${assignments[@]}" >/dev/null
 
-    printf 'backfill %s/%s, added %d field(s)\n' "$vault" "$env_name" "${#assignments[@]}"
+    printf 'updated  %s/%s, wrote %d field(s)\n' "$vault" "$env_name" "${#assignments[@]}"
+}
+
+is_terraform_field() {
+    local field
+    for field in "${terraform_fields[@]}"; do
+        [[ "$1" == "$field" ]] && return 0
+    done
+    return 1
+}
+
+# Sets tf_available, tf_destination and tf_region for one env. Never fatal: an
+# env with no terraform (local) or unreachable state leaves whatever the vault
+# already holds.
+resolve_terraform() {
+    local env_name="$1" dir="$repo_root/infra/$1"
+
+    tf_available=no
+    tf_destination=
+    tf_region=
+
+    [[ -f "$dir/main.tf" ]] || return 0
+
+    # `terraform output -raw` exits 0 and prints nothing when there is no state,
+    # so an empty value has to count as unreadable or the vault gets "".
+    tf_destination="$(terraform -chdir="$dir" output -raw pg_backups_destination 2>/dev/null)" || true
+    tf_region="$(terraform -chdir="$dir" output -raw pg_backups_region 2>/dev/null)" || true
+
+    if [[ -z "$tf_destination" || -z "$tf_region" ]]; then
+        printf 'skipped  %s/%s pg-backup-*, no terraform output in infra/%s (apply it first)\n' \
+            "$vault" "$env_name" "$env_name"
+        return 0
+    fi
+
+    tf_available=yes
 }
 
 value_for() {
@@ -119,6 +175,14 @@ value_for() {
             ;;
         grafana-admin-username)
             printf 'admin'
+            ;;
+        pg-backup-destination)
+            if [[ "$tf_available" == yes ]]; then printf '%s' "$tf_destination"
+            else printf 'REPLACE_ME-%s-%s' "$env_name" "$field"; fi
+            ;;
+        pg-backup-region)
+            if [[ "$tf_available" == yes ]]; then printf '%s' "$tf_region"
+            else printf 'REPLACE_ME-%s-%s' "$env_name" "$field"; fi
             ;;
         *)
             generate

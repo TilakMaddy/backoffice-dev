@@ -9,6 +9,8 @@ data:
   OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: staging/chain-indexer-pg-password
   OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: staging/chain-indexer-pg-superuser-password
   OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: staging/chain-indexer-hasura-admin-secret
+  OP_VAULT_PG_BACKUP_DESTINATION: staging/pg-backup-destination
+  OP_VAULT_PG_BACKUP_REGION: staging/pg-backup-region
 
   # common
   PLATFORM_NAMESPACE: platform-system
@@ -47,6 +49,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
