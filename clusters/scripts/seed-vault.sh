@@ -85,6 +85,15 @@ external_fields=(
 main() {
     local env_name matches
 
+    # One env, or every env when the argument is omitted.
+    if [[ -n "${1:-}" ]]; then
+        if ! printf '%s\n' "${envs[@]}" | grep -qx -- "$1"; then
+            printf 'error: unknown env %s, expected one of: %s\n' "$1" "${envs[*]}" >&2
+            exit 1
+        fi
+        envs=("$1")
+    fi
+
     if ! op vault get "$vault" >/dev/null 2>&1; then
         printf 'error: cannot reach vault %s -- not signed in to op, or no access to it.\n' "$vault" >&2
         printf '       op must be authenticated: desktop app integration, op signin, or\n' >&2

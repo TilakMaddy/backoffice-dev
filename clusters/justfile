@@ -1,7 +1,10 @@
-# Seed the OatLabs 1Password items -- local, staging, production -- with
-# REPLACE_ME placeholders for every field the entrypoints read. Safe to rerun.
-seed-vault:
-    ./scripts/seed-vault.sh
+# Seed the 1Password items -- local, staging, production -- with REPLACE_ME
+# placeholders for every field the entrypoints read, and with the backup
+# destination and region read from terraform. Safe to rerun. Name one env, e.g.
+#   just seed-vault staging
+# to leave the others alone.
+seed-vault env="":
+    ./scripts/seed-vault.sh {{ env }}
 
 # Bootstrap the flux entrypoint at clusters/entrypoints/<env>/<cluster>, e.g.
 #   just bootstrap staging/us-west-2-aws-backoffice-dataplane
