@@ -5,6 +5,9 @@ metadata:
   namespace: flux-system
 data:
   # vault
+  OP_VAULT: MyIndexer
+  OP_VAULT_CLUSTER_ZONE: staging/cluster-zone
+  OP_VAULT_TXT_OWNER_ID: staging/txt-owner-id
   OP_VAULT_ACME_EMAIL: staging/acme-email
   OP_VAULT_ALERT_EMAIL_TO: staging/alert-email-to
   OP_VAULT_CLOUDFLARE_TOKEN: staging/cloudflare-api-token
@@ -62,5 +65,3 @@ spec:
     substituteFrom:
       - kind: ConfigMap
         name: platform-vars
-      - kind: ConfigMap
-        name: platform-owner-vars

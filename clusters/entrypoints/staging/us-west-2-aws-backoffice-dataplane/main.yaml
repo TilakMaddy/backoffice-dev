@@ -5,6 +5,7 @@ metadata:
   namespace: flux-system
 data:
   # vault
+  OP_VAULT_INDEXER_IMAGE_NAME: staging/indexer-image-name
   OP_VAULT_ENVIO_TOKEN: staging/envio-token
   OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: staging/chain-indexer-pg-password
   OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: staging/chain-indexer-pg-superuser-password
@@ -75,10 +76,10 @@ spec:
   postBuild:
     substituteFrom:
       - kind: ConfigMap
-        name: platform-owner-vars
-      - kind: ConfigMap
         name: cluster-vars
       - kind: ConfigMap
-        name: cluster-owner-vars
-      - kind: ConfigMap
         name: chain-indexer-vars
+      - kind: Secret
+        name: platform-secret-vars
+      - kind: Secret
+        name: cluster-secret-vars

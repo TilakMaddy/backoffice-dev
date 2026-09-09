@@ -18,8 +18,6 @@ spec:
       - kind: ConfigMap
         name: cluster-vars
       - kind: ConfigMap
-        name: cluster-owner-vars
-      - kind: ConfigMap
         name: chain-indexer-vars
       - kind: Secret
         name: cluster-secret-vars

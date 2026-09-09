@@ -1,8 +1,36 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-vault="${OP_VAULT:-MyIndexer}"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+
+# The vault name is the one owner value that cannot live in the vault, so the
+# entrypoints hold it and this reads it back from them rather than keeping a
+# second copy. Every entrypoint has to name the same vault.
+resolve_vault() {
+    local names count
+
+    names="$(awk '/^  OP_VAULT: /{print $2}' \
+        "$repo_root"/clusters/entrypoints/*/*/bootstrap.yaml 2>/dev/null | sort -u)"
+    count="$(printf '%s' "$names" | grep -c . || true)"
+
+    case "$count" in
+        1) printf '%s' "$names" ;;
+        0)
+            printf 'error: no OP_VAULT found in %s/clusters/entrypoints/*/*/bootstrap.yaml\n' \
+                "$repo_root" >&2
+            printf '       set OP_VAULT to name the vault explicitly.\n' >&2
+            return 1
+            ;;
+        *)
+            printf 'error: entrypoints name %s different vaults:\n' "$count" >&2
+            printf '%s\n' "$names" | sed 's/^/       /' >&2
+            printf '       set OP_VAULT to pick one.\n' >&2
+            return 1
+            ;;
+    esac
+}
+
+vault="${OP_VAULT:-$(resolve_vault)}"
 
 envs=(
     local
@@ -11,6 +39,9 @@ envs=(
 )
 
 fields=(
+    cluster-zone
+    txt-owner-id
+    indexer-image-name
     cloudflare-api-token
     resend-smtp-password
     envio-token
@@ -38,6 +69,9 @@ terraform_fields=(
 # Issued by a third party, or naming a person or a domain; only a human can
 # supply them.
 external_fields=(
+    cluster-zone
+    txt-owner-id
+    indexer-image-name
     cloudflare-api-token
     resend-smtp-password
     envio-token
@@ -164,7 +198,7 @@ value_for() {
     local env_name="$1" field="$2"
 
     case "$field" in
-        cloudflare-api-token|resend-smtp-password|envio-token|acme-email|alert-email-to|grafana-smtp-from-address)
+        cluster-zone|txt-owner-id|indexer-image-name|cloudflare-api-token|resend-smtp-password|envio-token|acme-email|alert-email-to|grafana-smtp-from-address)
             printf 'REPLACE_ME-%s-%s' "$env_name" "$field"
             ;;
         grafana-smtp-host)
