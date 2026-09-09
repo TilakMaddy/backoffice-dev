@@ -11,7 +11,7 @@ spec:
     branch: dev
   secretRef:
     name: flux-system
-  url: https://github.com/TilakMaddy/backoffice-dev.git
+  url: https://github.com/TilakMaddy/hyperindex-openinfra.git
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
