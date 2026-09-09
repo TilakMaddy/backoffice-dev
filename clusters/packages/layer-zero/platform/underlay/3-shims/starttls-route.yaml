@@ -1,0 +1,57 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata:
+  name: starttls-fallback-route
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: postgres-direct
+  hostnames:
+    - fallback-route.hostname.is.invalid
+  rules:
+    - backendRefs:
+        - name: pg-starttls
+          port: 5432
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: pg-starttls-client-ip
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: TLSRoute
+      name: starttls-fallback-route
+
+  proxyProtocol:
+    version: V2
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyPatchPolicy
+metadata:
+  name: pg-starttls-fallback
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway
+  type: JSONPatch
+  jsonPatches:
+    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
+      name: "${PLATFORM_NAMESPACE}/gateway/postgres-direct"
+      operation:
+        op: add
+        path: "/default_filter_chain"
+        value:
+          name: pg-starttls-fallback
+          filters:
+            - name: envoy.filters.network.tcp_proxy
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.tcp_proxy.v3.TcpProxy
+                stat_prefix: pg-starttls-fallback
+                cluster: "tlsroute/${PLATFORM_NAMESPACE}/starttls-fallback-route/rule/-1"

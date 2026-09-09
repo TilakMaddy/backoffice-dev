@@ -1,0 +1,67 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability-operators
+  namespace: flux-system
+spec:
+  interval: ${FLUX_INTERVAL}
+  retryInterval: ${FLUX_RETRY_INTERVAL}
+  timeout: ${FLUX_TIMEOUT}
+  path: ${PLATFORM_PATH_PREFIX:=.}/platform/observability/0-operators
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: ${PLATFORM_SOURCE}
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability-collectors
+  namespace: flux-system
+spec:
+  interval: ${FLUX_INTERVAL}
+  retryInterval: ${FLUX_RETRY_INTERVAL}
+  timeout: ${FLUX_TIMEOUT}
+  path: ${PLATFORM_PATH_PREFIX:=.}/platform/observability/1-collectors
+  dependsOn:
+    - name: observability-operators
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: ${PLATFORM_SOURCE}
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: observability-instances
+  namespace: flux-system
+spec:
+  interval: ${FLUX_INTERVAL}
+  retryInterval: ${FLUX_RETRY_INTERVAL}
+  timeout: ${FLUX_TIMEOUT}
+  path: ${PLATFORM_PATH_PREFIX:=.}/platform/observability/2-instances
+  dependsOn:
+    - name: observability-operators
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: ${PLATFORM_SOURCE}
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: platform-vars
+      - kind: Secret
+        name: platform-secret-vars

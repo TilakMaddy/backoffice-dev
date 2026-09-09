@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-direct
+  namespace: envoy-gateway-system
+spec:
+  selector:
+    gateway.envoyproxy.io/owning-gateway-name: gateway
+    gateway.envoyproxy.io/owning-gateway-namespace: ${PLATFORM_NAMESPACE}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+

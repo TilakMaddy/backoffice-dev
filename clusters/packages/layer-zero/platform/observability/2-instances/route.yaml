@@ -1,0 +1,56 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: grafana-system
+  annotations:
+    oatlabs.oatmilk.work/external-dns: "true"
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  parentRefs:
+    - name: gateway
+      namespace: ${PLATFORM_NAMESPACE}
+      sectionName: web-https
+  hostnames:
+    - grafana.${CLUSTER_ZONE}
+  rules:
+    - backendRefs:
+        - name: grafana-service
+          port: 3000
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: grafana-allowlist
+  namespace: grafana-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: grafana-route
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: allowed-clients
+        action: Allow
+        principal:
+          clientCIDRs: ${GRAFANA_ALLOWED_CIDRS}
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: grafana-no-tracing
+  namespace: grafana-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: grafana-route
+  telemetry:
+    tracing:
+      samplingFraction:
+        numerator: 0
+      overallSamplingFraction:
+        numerator: 0

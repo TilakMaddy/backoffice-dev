@@ -1,0 +1,91 @@
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaAlertRuleGroup
+metadata:
+  name: platform-storage
+  namespace: grafana-system
+spec:
+  folderRef: platform
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true
+  resyncPeriod: 5m
+  interval: 5m
+  rules:
+    # kubelet reports no volume stats for hostPath-backed PVs, so this rule is
+    # dataless on kind and only fires on CSI-backed clusters.
+    - uid: platform-pvc-nearing-capacity
+      title: Persistent volume nearing capacity
+      condition: B
+      for: 30m
+      execErrState: Alerting
+      noDataState: OK
+      labels:
+        severity: warning
+      annotations:
+        summary: PVC {{ $$labels.namespace }}/{{ $$labels.persistentvolumeclaim }} is above 75% used
+        runbook: Neither Loki nor Tempo has size-based retention. Lower the component's retention rather than growing the volume.
+      data:
+        - refId: A
+          datasourceUid: prometheus
+          relativeTimeRange:
+            from: 600
+            to: 0
+          model:
+            refId: A
+            datasource:
+              type: prometheus
+              uid: prometheus
+            expr: max by (namespace, persistentvolumeclaim) (100 * kubelet_volume_stats_used_bytes / kubelet_volume_stats_capacity_bytes)
+            instant: true
+        - refId: B
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: threshold
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            conditions:
+              - evaluator:
+                  type: gt
+                  params: [75]
+
+    - uid: platform-node-disk-nearing-capacity
+      title: Node disk nearing capacity
+      condition: B
+      for: 30m
+      execErrState: Alerting
+      noDataState: OK
+      labels:
+        severity: warning
+      annotations:
+        summary: Node {{ $$labels.instance }} filesystem is above 80% used
+        runbook: On kind, local-path PVs are hostPath directories under /var and ignore their declared size, so a component's retention is the only real bound.
+      data:
+        - refId: A
+          datasourceUid: prometheus
+          relativeTimeRange:
+            from: 600
+            to: 0
+          model:
+            refId: A
+            datasource:
+              type: prometheus
+              uid: prometheus
+            expr: max by (instance) (100 * (1 - node_filesystem_avail_bytes{fstype!~"tmpfs|ramfs",mountpoint=~"/|/var"} / node_filesystem_size_bytes{fstype!~"tmpfs|ramfs",mountpoint=~"/|/var"}))
+            instant: true
+        - refId: B
+          datasourceUid: __expr__
+          model:
+            refId: B
+            type: threshold
+            datasource:
+              type: __expr__
+              uid: __expr__
+            expression: A
+            conditions:
+              - evaluator:
+                  type: gt
+                  params: [80]

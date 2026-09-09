@@ -1,0 +1,59 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:background-controller:zone-certificate-tls
+  labels:
+    rbac.kyverno.io/aggregate-to-background-controller: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+
+---
+# synchronize: true makes Kyverno run a second auth check with verbs list,get
+# against the admission controller SA, on top of the background controller one.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:admission-controller:zone-certificate-tls
+  labels:
+    rbac.kyverno.io/aggregate-to-admission-controller: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: zone-certificate-tls-clone
+spec:
+  generateExisting: true
+  webhookConfiguration:
+    failurePolicy: Fail
+    matchConditions:
+      - name: zone-certificate-tls-namespaces-only
+        expression: >-
+          object != null && has(object.metadata.labels) &&
+          'oatlabs.oatmilk.work/zone-certificate-tls' in object.metadata.labels &&
+          object.metadata.labels['oatlabs.oatmilk.work/zone-certificate-tls'] == 'true'
+  rules:
+    - name: clone-zone-certificate-tls
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  oatlabs.oatmilk.work/zone-certificate-tls: "true"
+      generate:
+        apiVersion: v1
+        kind: Secret
+        name: zone-certificate-tls
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        clone:
+          namespace: ${PLATFORM_NAMESPACE}
+          name: zone-certificate-tls

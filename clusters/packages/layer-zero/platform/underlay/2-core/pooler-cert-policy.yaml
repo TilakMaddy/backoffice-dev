@@ -1,0 +1,57 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno:background-controller:pooler-cert
+  labels:
+    rbac.kyverno.io/aggregate-to-background-controller: "true"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: pooler-cert-restart
+spec:
+  webhookConfiguration:
+    failurePolicy: Fail
+    matchConditions:
+      - name: pooler-restart-secrets-only
+        expression: >-
+          object != null && has(object.metadata.labels) &&
+          'oatlabs.oatmilk.work/pooler-restart' in object.metadata.labels &&
+          object.metadata.labels['oatlabs.oatmilk.work/pooler-restart'] == 'true'
+  rules:
+    - name: stamp-client-cert-hash
+      match:
+        any:
+          - resources:
+              kinds:
+                - Secret
+              selector:
+                matchLabels:
+                  oatlabs.oatmilk.work/pooler-restart: "true"
+              operations:
+                - CREATE
+                - UPDATE
+      mutate:
+        mutateExistingOnPolicyUpdate: false
+        targets:
+          - apiVersion: apps/v1
+            kind: Deployment
+            namespace: "{{ request.namespace }}"
+            selector:
+              matchExpressions:
+                - key: cnpg.io/poolerName
+                  operator: Exists
+        patchStrategicMerge:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  oatlabs.oatmilk.work/client-cert: '{{ sha256(request.object.data."tls.crt") }}'
