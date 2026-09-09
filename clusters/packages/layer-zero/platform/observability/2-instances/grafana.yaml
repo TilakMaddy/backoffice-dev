@@ -47,6 +47,11 @@ spec:
             - name: grafana-data
               persistentVolumeClaim:
                 claimName: grafana-pvc
+          securityContext:
+            fsGroup: 10001
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile:
+              type: RuntimeDefault
           nodeSelector:
             node-role.kubernetes.io/observability: ""
           tolerations:
