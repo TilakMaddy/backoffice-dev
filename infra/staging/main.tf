@@ -1,5 +1,6 @@
 module "marvel" {
-  source = "/Users/tilakmadichetti/Code/oatlabs/terraform-aws-k8s-lima"
+  source  = "oatlabs/k8s-lima/aws"
+  version = "0.0.2"
 
   config = file("${path.module}/config.json")
 }
