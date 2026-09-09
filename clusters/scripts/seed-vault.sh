@@ -31,6 +31,7 @@ resolve_vault() {
 }
 
 vault="${OP_VAULT:-$(resolve_vault)}"
+op_stderr=
 
 envs=(
     local
@@ -132,11 +133,8 @@ create() {
         assignments+=("${field}[password]=$(value_for "$env_name" "$field")")
     done
 
-    op item create \
-        --vault "$vault" \
-        --category "Secure Note" \
-        --title "$env_name" \
-        "${assignments[@]}" >/dev/null
+    attempt op_create "$env_name" "${assignments[@]}" \
+        || fail_write "$env_name" create "${assignments[@]}"
 
     printf 'created  %s/%s with %d fields\n' "$vault" "$env_name" "${#fields[@]}"
 }
@@ -166,9 +164,70 @@ backfill() {
         return
     fi
 
-    op item edit "$env_name" --vault "$vault" "${assignments[@]}" >/dev/null
+    attempt op_edit "$env_name" "${assignments[@]}" \
+        || fail_write "$env_name" edit "${assignments[@]}"
 
     printf 'updated  %s/%s, wrote %d field(s)\n' "$vault" "$env_name" "${#assignments[@]}"
+}
+
+op_create() {
+    local env_name="$1"
+    shift
+    op item create --vault "$vault" --category "Secure Note" --title "$env_name" "$@" >/dev/null
+}
+
+op_edit() {
+    local env_name="$1"
+    shift
+    op item edit "$env_name" --vault "$vault" "$@" >/dev/null
+}
+
+# Runs one op write and parks its stderr in op_stderr instead of letting it
+# stream out bare.
+attempt() {
+    local status=0
+
+    op_stderr="$("$@" 2>&1)" || status=$?
+    return "$status"
+}
+
+# op says only "Couldn't update the item." -- no item, no field, no reason. This
+# names both, and when a multi-field write fails it replays the assignments one
+# at a time to point at the field op actually rejects. The writes that do land
+# stay landed, which is what a rerunnable seeder wants anyway. Values are never
+# printed; only field names.
+fail_write() {
+    local env_name="$1" action="$2"
+    shift 2
+    local assignments=("$@") one names=()
+
+    for one in "${assignments[@]}"; do
+        names+=("${one%%\[*}")
+    done
+
+    printf 'error: op could not %s %s/%s\n' "$action" "$vault" "$env_name" >&2
+    printf '       fields: %s\n' "${names[*]}" >&2
+    [[ -n "$op_stderr" ]] && printf '%s\n' "$op_stderr" | sed 's/^/       op: /' >&2
+
+    if [[ "$action" == edit && ${#assignments[@]} -gt 1 ]]; then
+        printf '\n       retrying one field at a time:\n' >&2
+        for one in "${assignments[@]}"; do
+            if attempt op_edit "$env_name" "$one"; then
+                printf '         wrote    %s\n' "${one%%\[*}" >&2
+            else
+                printf '         rejected %s\n' "${one%%\[*}" >&2
+                [[ -n "$op_stderr" ]] && printf '%s\n' "$op_stderr" \
+                    | sed 's/^/           op: /' >&2
+            fi
+        done
+    fi
+
+    printf '\n       op vault get only proves read access, so a write can still fail on:\n' >&2
+    printf '         - an expired session or lost write access: op whoami, then op signin\n' >&2
+    printf '         - read-only access to %s, or a service account without write\n' "$vault" >&2
+    printf '         - a field label that collides with an existing one on the item\n' >&2
+    printf '       inspect: op item get %s --vault %s --format=json\n' "$env_name" "$vault" >&2
+    exit 1
 }
 
 is_terraform_field() {
