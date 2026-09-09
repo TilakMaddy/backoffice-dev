@@ -77,6 +77,8 @@ external_fields=(
     envio-token
     acme-email
     alert-email-to
+    grafana-smtp-host
+    grafana-smtp-user
     grafana-smtp-from-address
 )
 
@@ -198,14 +200,8 @@ value_for() {
     local env_name="$1" field="$2"
 
     case "$field" in
-        cluster-zone|txt-owner-id|indexer-image-name|cloudflare-api-token|resend-smtp-password|envio-token|acme-email|alert-email-to|grafana-smtp-from-address)
+        cluster-zone|txt-owner-id|indexer-image-name|cloudflare-api-token|resend-smtp-password|envio-token|acme-email|alert-email-to|grafana-smtp-host|grafana-smtp-user|grafana-smtp-from-address)
             printf 'REPLACE_ME-%s-%s' "$env_name" "$field"
-            ;;
-        grafana-smtp-host)
-            printf 'smtp.resend.com:587'
-            ;;
-        grafana-smtp-user)
-            printf 'resend'
             ;;
         grafana-admin-username)
             printf 'admin'
