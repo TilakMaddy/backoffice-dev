@@ -16,14 +16,17 @@ bootstrap target="":
 destroy target="":
     ./scripts/destroy.sh {{ target }}
 
-psql-staging db="postgres-chain-indexer" dbname="indexer-db" zone="us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work":
-    @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')}" \
-    psql "host={{ db }}.{{ zone }} port=5432 user=postgres dbname={{ dbname }} sslmode=verify-full sslrootcert=tests/stg-root-x1.pem"
+stg_zone := "us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work"
 
-hasura-staging query host="hasura-chain-indexer" zone="us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work":
-    @jq -nc --arg q {{ quote(query) }} '{query:$q}' \
+psql-staging:
+    @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')}" \
+    psql "host=postgres-chain-indexer.{{ stg_zone }} port=5432 user=postgres dbname=indexer-db sslmode=verify-full sslrootcert=tests/stg-root-x1.pem"
+
+hasura-staging query="{ chain_metadata { chain_id start_block block_height latest_processed_block num_events_processed is_hyper_sync } }":
+    @q={{ quote(query) }}; if [ ! -t 0 ]; then s="$(cat)"; if [ -n "$s" ]; then q="$s"; fi; fi; \
+    jq -nc --arg q "$q" '{query:$q}' \
     | curl -sS --cacert tests/stg-root-x1.pem -d @- \
         -H "x-hasura-admin-secret: ${HASURA_ADMIN_SECRET:-$(op read 'op://MyIndexer/staging/chain-indexer-hasura-admin-secret')}" \
         -H 'Content-Type: application/json' \
-        "https://{{ host }}.{{ zone }}/v1/graphql" \
+        "https://hasura-chain-indexer.{{ stg_zone }}/v1/graphql" \
     | jq .
