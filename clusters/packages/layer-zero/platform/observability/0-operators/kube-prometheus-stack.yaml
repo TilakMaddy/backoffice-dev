@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prometheus-system
+
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: grafana-alertmanager-auth
+  namespace: prometheus-system
+spec:
+  refreshInterval: 15m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: grafana-alertmanager-auth
+    creationPolicy: Owner
+  data:
+    - secretKey: username
+      remoteRef:
+        key: ${OP_VAULT_GRAFANA_ADMIN_USER}
+    - secretKey: password
+      remoteRef:
+        key: ${OP_VAULT_GRAFANA_ADMIN_PASSWORD}
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: prometheus-community
+  namespace: prometheus-system
+spec:
+  interval: 30m
+  url: https://prometheus-community.github.io/helm-charts
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: prometheus-system
+spec:
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      version: "89.*"
+      interval: 30m
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: prometheus-system
+  releaseName: kube-prometheus-stack
+  targetNamespace: prometheus-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 5m
+  values:
+    grafana:
+      enabled: false
+    alertmanager:
+      enabled: false
+    windowsMonitoring:
+      enabled: false
+
+    # Talos and kind do not expose these on a scrapable address.
+    kubeEtcd:
+      enabled: false
+    kubeScheduler:
+      enabled: false
+    kubeControllerManager:
+      enabled: false
+    kubeProxy:
+      enabled: false
+
+    prometheusOperator:
+      nodeSelector:
+        node-role.kubernetes.io/observability: ""
+      tolerations:
+        - key: node-role.kubernetes.io/observability
+          operator: Exists
+          effect: NoSchedule
+      admissionWebhooks:
+        patch:
+          nodeSelector:
+            node-role.kubernetes.io/observability: ""
+          tolerations:
+            - key: node-role.kubernetes.io/observability
+              operator: Exists
+              effect: NoSchedule
+
+    kube-state-metrics:
+      nodeSelector:
+        node-role.kubernetes.io/observability: ""
+      tolerations:
+        - key: node-role.kubernetes.io/observability
+          operator: Exists
+          effect: NoSchedule
+
+    prometheus-node-exporter:
+      tolerations:
+        - operator: Exists
+
+    prometheus:
+      prometheusSpec:
+        retention: 14d
+        retentionSize: 8GB
+
+        alerting:
+          alertmanagers:
+            - namespace: grafana-system
+              name: grafana-service
+              port:
+                name: grafana
+              scheme: http
+              apiVersion: v2
+              pathPrefix: /api/alertmanager/grafana
+              basicAuth:
+                username:
+                  name: grafana-alertmanager-auth
+                  key: username
+                password:
+                  name: grafana-alertmanager-auth
+                  key: password
+
+        # Left nil the operator selects only CRs carrying this chart's own
+        # release label, which excludes every monitor declared outside it.
+        serviceMonitorSelectorNilUsesHelmValues: false
+        podMonitorSelectorNilUsesHelmValues: false
+        ruleSelectorNilUsesHelmValues: false
+        probeSelectorNilUsesHelmValues: false
+        scrapeConfigSelectorNilUsesHelmValues: false
+
+        nodeSelector:
+          node-role.kubernetes.io/observability: ""
+        tolerations:
+          - key: node-role.kubernetes.io/observability
+            operator: Exists
+            effect: NoSchedule
+
+        storageSpec:
+          volumeClaimTemplate:
+            spec:
+              accessModes:
+                - ReadWriteOnce
+              resources:
+                requests:
+                  storage: 20Gi
+
+        resources:
+          requests:
+            cpu: 200m
+            memory: 1Gi
+          limits:
+            memory: 2Gi

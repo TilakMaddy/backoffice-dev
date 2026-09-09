@@ -1,0 +1,92 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: grafana-smtp
+  namespace: grafana-system
+spec:
+  refreshInterval: 15m
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword
+  target:
+    name: grafana-smtp-secret
+    creationPolicy: Owner
+  data:
+    - secretKey: password
+      remoteRef:
+        key: ${OP_VAULT_RESEND_SMTP_PASSWORD}
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaContactPoint
+metadata:
+  name: email-oncall
+  namespace: grafana-system
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  name: email-oncall
+  resyncPeriod: 5m
+  receivers:
+    - type: email
+      disableResolveMessage: false
+      settings:
+        addresses: ${ALERT_EMAIL_TO}
+        singleEmail: false
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaMuteTiming
+metadata:
+  name: always
+  namespace: grafana-system
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  name: always
+  resyncPeriod: 5m
+  time_intervals:
+    - times:
+        - start_time: "00:00"
+          end_time: "24:00"
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaNotificationPolicy
+metadata:
+  name: default
+  namespace: grafana-system
+spec:
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  resyncPeriod: 5m
+  route:
+    receiver: email-oncall
+    group_by:
+      - grafana_folder
+      - alertname
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h
+    routes:
+      - receiver: email-oncall
+        object_matchers:
+          - [severity, =, info]
+        mute_time_intervals:
+          - always
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: platform
+  namespace: grafana-system
+spec:
+  title: Platform
+  instanceSelector:
+    matchLabels:
+      dashboards: grafana
+  allowCrossNamespaceImport: true

@@ -4,21 +4,26 @@ metadata:
   name: platform-vars
   namespace: flux-system
 data:
-  CLUSTER_NAME: backoffice-dataplane
-  CLUSTER_ZONE: backoffice.oatlabs-local.oatmilk.work
-  ACME_EMAIL: tilak.madichetti@gmail.com
+  # vault
+  OP_VAULT: MyIndexer
+  OP_VAULT_CLUSTER_ZONE: local/cluster-zone
+  OP_VAULT_TXT_OWNER_ID: local/txt-owner-id
+  OP_VAULT_ACME_EMAIL: local/acme-email
+  OP_VAULT_ALERT_EMAIL_TO: local/alert-email-to
+  OP_VAULT_CLOUDFLARE_TOKEN: local/cloudflare-api-token
+  OP_VAULT_GRAFANA_ADMIN_USER: local/grafana-admin-username
+  OP_VAULT_GRAFANA_ADMIN_PASSWORD: local/grafana-admin-password
+  OP_VAULT_GRAFANA_SMTP_HOST: local/grafana-smtp-host
+  OP_VAULT_GRAFANA_SMTP_USER: local/grafana-smtp-user
+  OP_VAULT_GRAFANA_SMTP_FROM_ADDRESS: local/grafana-smtp-from-address
+  OP_VAULT_RESEND_SMTP_PASSWORD: local/resend-smtp-password
+
+  # common
+  PLATFORM_SOURCE: platform-foundation
+  PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
+  PLATFORM_NAMESPACE: platform-system
   ACME_ENV: staging # staging | production
-  OP_VAULT: OatLabs
-  OP_VAULT_CLOUDFLARE_TOKEN: Cloudflare/ukceipl2n4jri73dq2nwwayk5i # api_token_secret
-  OP_VAULT_GHCR_USERNAME: GHCR/voorr2yncxhtrprnkkpmpeohpe # username
-  OP_VAULT_GHCR_TOKEN: GHCR/e6wg2mswa77c44e76spqs6tp6q # pull_token
-  OP_VAULT_RESEND_SMTP_PASSWORD: Resend/password
-  GRAFANA_SMTP_HOST: smtp.resend.com:587
-  GRAFANA_SMTP_USER: resend
-  GRAFANA_SMTP_FROM_ADDRESS: alerts@backoffice.oatmilk.work
-  ALERT_EMAIL_TO: tilak.madichetti@gmail.com
-  GRAFANA_ADMIN_USER: admin
-  GRAFANA_ADMIN_PASSWORD: pass123
+  GRAFANA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
   FLUX_INTERVAL: 30s
   FLUX_RETRY_INTERVAL: 15s
   FLUX_TIMEOUT: 1m0s
@@ -34,11 +39,11 @@ metadata:
 spec:
   interval: 30s
   ref:
-    branch: tilak/feat/add-hasura
+    branch: dev
   secretRef:
     name: flux-system
   recurseSubmodules: true
-  url: https://github.com/TilakMaddy/backoffice-dev.git
+  url: https://github.com/TilakMaddy/hyperindex-openinfra.git
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -57,11 +62,6 @@ spec:
     kind: GitRepository
     name: platform-foundation
   postBuild:
-    substitute:
-      CLUSTER_CONFIG: platform-vars
-      PLATFORM_SOURCE: platform-foundation
-      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
-      PLATFORM_NAMESPACE: platform-system
     substituteFrom:
       - kind: ConfigMap
         name: platform-vars

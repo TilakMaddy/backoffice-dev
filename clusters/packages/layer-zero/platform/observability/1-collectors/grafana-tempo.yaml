@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tempo-system
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: grafana
+  namespace: tempo-system
+spec:
+  interval: 30m
+  url: https://grafana.github.io/helm-charts
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: tempo
+  namespace: tempo-system
+spec:
+  chart:
+    spec:
+      chart: tempo
+      version: "1.24.*"
+      interval: 30m
+      sourceRef:
+        kind: HelmRepository
+        name: grafana
+        namespace: tempo-system
+  releaseName: tempo
+  targetNamespace: tempo-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+  interval: 5m
+  values:
+    replicas: 1
+
+    tempo:
+      reportingEnabled: false
+      retention: 336h
+
+      # A ballast inflates Go's perceived heap so the GC runs later; at the
+      # chart default of 1024 it lets the heap pass the container limit and
+      # the kernel OOM-kills tempo. GOMEMLIMIT collects before that instead.
+      memBallastSizeMbs: 0
+      extraEnv:
+        - name: GOMEMLIMIT
+          value: 800MiB
+
+      storage:
+        trace:
+          backend: local
+          local:
+            path: /var/tempo/traces
+          wal:
+            path: /var/tempo/wal
+
+      # _ports.tpl dereferences receivers.jaeger.protocols.*.endpoint
+      # unconditionally, so trimming this block fails the chart render.
+      # Only OTLP gRPC 4317 is used.
+      receivers:
+        jaeger:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:14250
+            thrift_binary:
+              endpoint: 0.0.0.0:6832
+            thrift_compact:
+              endpoint: 0.0.0.0:6831
+            thrift_http:
+              endpoint: 0.0.0.0:14268
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+
+      # local-blocks serves TraceQL metrics (rate/quantile_over_time) from Tempo
+      # itself; without it every aggregate query fails with "empty ring".
+      metricsGenerator:
+        enabled: true
+        remoteWriteUrl: http://kube-prometheus-stack-prometheus.prometheus-system.svc.cluster.local:9090/api/v1/write
+        processor:
+          local_blocks:
+            flush_to_storage: true
+        storage:
+          path: /var/tempo/generator/wal
+        traces_storage:
+          path: /var/tempo/generator/traces
+
+      # Tempo has no size-based retention, so a span storm would fill the
+      # volume before the 336h window is reached and stall ingestion.
+      overrides:
+        defaults:
+          ingestion:
+            rate_strategy: local
+            rate_limit_bytes: 2000000
+            burst_size_bytes: 4000000
+            max_traces_per_user: 10000
+          global:
+            max_bytes_per_trace: 1500000
+          metrics_generator:
+            processors:
+              - local-blocks
+
+      resources:
+        requests:
+          cpu: 100m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+
+    persistence:
+      enabled: true
+      size: 5Gi
+
+    nodeSelector:
+      node-role.kubernetes.io/observability: ""
+    tolerations:
+      - key: node-role.kubernetes.io/observability
+        operator: Exists
+        effect: NoSchedule
+
+    serviceMonitor:
+      enabled: true
+
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: envoyproxy-to-tempo
+  namespace: tempo-system
+spec:
+  from:
+    - group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      namespace: envoy-gateway-system
+  to:
+    - group: ""
+      kind: Service
+      name: tempo

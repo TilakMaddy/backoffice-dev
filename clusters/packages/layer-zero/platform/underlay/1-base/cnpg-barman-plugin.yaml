@@ -1,0 +1,24 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: plugin-barman-cloud
+  namespace: cnpg-system
+spec:
+  chart:
+    spec:
+      chart: plugin-barman-cloud
+      version: "0.8.*"
+      interval: 30m
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+        namespace: cnpg-system
+  releaseName: plugin-barman-cloud
+  targetNamespace: cnpg-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  interval: 5m

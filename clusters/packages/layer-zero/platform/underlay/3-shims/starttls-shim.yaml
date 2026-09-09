@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pg-starttls
+  namespace: ${PLATFORM_NAMESPACE}
+  labels:
+    app: pg-starttls
+spec:
+  replicas: ${SHIM_REPLICAS}
+  selector:
+    matchLabels:
+      app: pg-starttls
+  template:
+    metadata:
+      labels:
+        app: pg-starttls
+    spec:
+      terminationGracePeriodSeconds: 30
+      nodeSelector:
+        node-role.kubernetes.io/general: ""
+      topologySpreadConstraints:
+        - topologyKey: topology.kubernetes.io/zone
+          maxSkew: 1
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: pg-starttls
+      containers:
+        - name: pg-starttls
+          image: ghcr.io/tilakmaddy/pg-starttls-shim:0.0.1
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: UPSTREAM_ADDR
+              value: postgres-direct.envoy-gateway-system.svc.cluster.local:5432
+          ports:
+            - name: postgres
+              containerPort: 5432
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 5
+          readinessProbe:
+            tcpSocket:
+              port: postgres
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pg-starttls
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: pg-starttls
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pg-starttls
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  selector:
+    app: pg-starttls
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

@@ -4,16 +4,32 @@ metadata:
   name: cluster-vars
   namespace: flux-system
 data:
-  CLUSTER_ZONE: us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work
+  # vault
+  OP_VAULT_INDEXER_IMAGE_NAME: staging/indexer-image-name
+  OP_VAULT_ENVIO_TOKEN: staging/envio-token
+  OP_VAULT_CHAIN_INDEXER_PG_PASSWORD: staging/chain-indexer-pg-password
+  OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD: staging/chain-indexer-pg-superuser-password
+  OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET: staging/chain-indexer-hasura-admin-secret
+  OP_VAULT_PG_BACKUP_DESTINATION: staging/pg-backup-destination
+  OP_VAULT_PG_BACKUP_REGION: staging/pg-backup-region
+
+  # common
+  PLATFORM_NAMESPACE: platform-system
+  FLUX_INTERVAL: 2m0s
+  FLUX_RETRY_INTERVAL: 30s
+  FLUX_TIMEOUT: 3m0s
   PG_INSTANCES: "3"
   PG_POOLER_INSTANCES: "3"
   PG_STORAGE: 1Gi
   PG_WAL_STORAGE: 1Gi
-  OP_VAULT_ENVIO_TOKEN: Envio/ubwxezyyaffdeg3q4xmabdyypy # token
-  INDEXER_IMAGE_NAME: ghcr.io/tilakmaddy/my-envio-indexer:staging
+  PG_BACKUPS_ENABLED: "true"
+  PG_BACKUP_RETENTION: 5d
+  PG_BACKUP_SCHEDULE: "0 0 3 * * *"
+  CHAIN_INDEXER_HASURA_ALLOWED_CIDRS: '["0.0.0.0/0"]'
+  CHAIN_INDEXER_PG_ALLOWED_PRINCIPALS: '[{"remote_ip": {"address_prefix": "0.0.0.0", "prefix_len": 0}}]'
   INDEXER_IMAGE_PULL_POLICY: Always
   INDEXER_KEEL_POLICY: force
-  INDEXER_KEEL_TRIGGER: manual
+  INDEXER_KEEL_TRIGGER: poll
   INDEXER_KEEL_POLL_INTERVAL: 1m
 
 ---
@@ -34,6 +50,10 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -50,43 +70,16 @@ spec:
   wait: true
   dependsOn:
     - name: common
-    - name: observability-operators
   sourceRef:
     kind: GitRepository
     name: flux-system
   postBuild:
-    substitute:
-      PLATFORM_NAMESPACE: platform-system
     substituteFrom:
       - kind: ConfigMap
         name: cluster-vars
       - kind: ConfigMap
         name: chain-indexer-vars
-
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: observability
-  namespace: flux-system
-spec:
-  interval: 2m0s
-  retryInterval: 30s
-  timeout: 3m0s
-  path: ./clusters/packages/layer-zero/platform/observability
-  prune: true
-  wait: true
-  dependsOn:
-    - name: bootstrap
-  sourceRef:
-    kind: GitRepository
-    name: platform-foundation
-  postBuild:
-    substitute:
-      CLUSTER_CONFIG: platform-vars
-      PLATFORM_SOURCE: platform-foundation
-      PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
-      PLATFORM_NAMESPACE: platform-system
-    substituteFrom:
-      - kind: ConfigMap
-        name: platform-vars
+      - kind: Secret
+        name: platform-secret-vars
+      - kind: Secret
+        name: cluster-secret-vars

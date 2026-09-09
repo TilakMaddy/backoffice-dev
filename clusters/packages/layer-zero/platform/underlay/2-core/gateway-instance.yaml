@@ -1,0 +1,51 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  gatewayClassName: envoy-gateway-class
+  listeners:
+    - name: postgres-direct
+      protocol: TLS
+      port: 5432
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              oatlabs.oatmilk.work/gateway-access: "true"
+      tls:
+        mode: Passthrough
+
+    - name: web-https
+      protocol: HTTPS
+      port: 443
+      hostname: '*.${CLUSTER_ZONE}'
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              oatlabs.oatmilk.work/gateway-access: "true"
+        kinds:
+          - kind: HTTPRoute
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: zone-certificate-tls
+
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: allow-proxy
+  namespace: ${PLATFORM_NAMESPACE}
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gateway
+  proxyProtocol:
+    optional: true

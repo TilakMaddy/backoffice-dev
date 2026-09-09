@@ -1,0 +1,19 @@
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: ${APP_CHAIN_INDEXER_PG_OBJECT_STORE}
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
+spec:
+  retentionPolicy: ${PG_BACKUP_RETENTION}
+  configuration:
+    destinationPath: ${PG_BACKUP_DESTINATION}
+    s3Credentials:
+      inheritFromIAMRole: true
+    data:
+      compression: gzip
+    wal:
+      compression: gzip
+  instanceSidecarConfiguration:
+    env:
+      - name: AWS_REGION
+        value: ${PG_BACKUP_REGION}

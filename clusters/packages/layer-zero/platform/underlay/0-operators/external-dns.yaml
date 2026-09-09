@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns-system
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: external-dns
+  namespace: external-dns-system
+spec:
+  interval: 30m
+  url: https://kubernetes-sigs.github.io/external-dns
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: external-dns
+  namespace: external-dns-system
+spec:
+  chart:
+    spec:
+      chart: external-dns
+      version: "1.21.*"
+      interval: 30m
+      sourceRef:
+        kind: HelmRepository
+        name: external-dns
+        namespace: external-dns-system
+  releaseName: external-dns
+  targetNamespace: external-dns-system
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  interval: 5m
+  values:
+    deploymentAnnotations:
+      reloader.stakater.com/auto: "true"
+    provider: cloudflare
+    env:
+      - name: CF_API_TOKEN
+        valueFrom:
+          secretKeyRef:
+            name: cloudflare-api-token-secret
+            key: api-token
+    sources:
+      - gateway-tlsroute
+      - gateway-httproute
+
+    policy: upsert-only
+    txtOwnerId: ${TXT_OWNER_ID}
+    extraArgs:
+      - --annotation-filter=oatlabs.oatmilk.work/external-dns=true
+      - --cloudflare-dns-records-per-page=5000
+      - --exclude-target-net=10.0.0.0/8
+      - --exclude-target-net=172.16.0.0/12
+      - --exclude-target-net=192.168.0.0/16

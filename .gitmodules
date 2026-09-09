@@ -1,4 +1,0 @@
-[submodule "clusters/packages/layer-zero"]
-	path = clusters/packages/layer-zero
-	url = https://github.com/TilakMaddy/layer-zero.git
-	branch = main
