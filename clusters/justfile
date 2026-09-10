@@ -19,17 +19,42 @@ destroy target="":
 stg_zone := "$(op read 'op://MyIndexer/staging/cluster-zone')"
 
 psql-staging:
-    @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')}" \
-    psql "host=postgres-chain-indexer.{{ stg_zone }} port=5432 user=postgres dbname=indexer-db sslmode=verify-full sslrootcert=tests/stg-root-x1.pem"
+    @zone="$(op read 'op://MyIndexer/staging/cluster-zone')"; \
+    pw="$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')"; \
+    enc="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$pw")"; \
+    ca="{{ justfile_directory() }}/tests/stg-root-x1.pem"; \
+    echo "host:     postgres-chain-indexer.$zone"; \
+    echo "port:     5432"; \
+    echo "database: indexer-db"; \
+    echo "username: postgres  (SUPERUSER -- unrestricted on every database)"; \
+    echo "password: $pw"; \
+    echo "ssl mode: verify-full"; \
+    echo "ssl ca:   $ca"; \
+    echo; \
+    echo "url:      postgresql://postgres:$enc@postgres-chain-indexer.$zone:5432/indexer-db?sslmode=verify-full"; \
+    echo; \
+    echo "psql:     psql \"postgresql://postgres:$enc@postgres-chain-indexer.$zone:5432/indexer-db?sslmode=verify-full&sslrootcert=$ca\""; \
+    echo; \
+    echo "beekeeper: paste the url, then set the CA cert above under SSL -- the staging"; \
+    echo "           cert chains to the Let's Encrypt staging root, which is not trusted"; \
+    echo "           by default. sslmode=require instead of verify-full skips the CA."
 
-hasura-staging query="{ chain_metadata { chain_id start_block block_height latest_processed_block num_events_processed is_hyper_sync } }":
-    @q={{ quote(query) }}; if [ ! -t 0 ]; then s="$(cat)"; if [ -n "$s" ]; then q="$s"; fi; fi; \
-    jq -nc --arg q "$q" '{query:$q}' \
-    | curl -sS --cacert tests/stg-root-x1.pem -d @- \
-        -H "x-hasura-admin-secret: ${HASURA_ADMIN_SECRET:-$(op read 'op://MyIndexer/staging/chain-indexer-hasura-admin-secret')}" \
-        -H 'Content-Type: application/json' \
-        "https://hasura-chain-indexer.{{ stg_zone }}/v1/graphql" \
-    | jq .
+hasura-staging:
+    @zone="$(op read 'op://MyIndexer/staging/cluster-zone')"; \
+    secret="$(op read 'op://MyIndexer/staging/chain-indexer-hasura-admin-secret')"; \
+    ca="{{ justfile_directory() }}/tests/stg-root-x1.pem"; \
+    echo "console:  https://hasura-chain-indexer.$zone/console"; \
+    echo "graphql:  https://hasura-chain-indexer.$zone/v1/graphql"; \
+    echo "password: $secret"; \
+    echo "ssl ca:   $ca"; \
+    echo; \
+    echo "query:    curl -s --cacert $ca \\"; \
+    echo "            -H 'x-hasura-admin-secret: $secret' \\"; \
+    echo "            -H 'Content-Type: application/json' \\"; \
+    echo "            -d '{\"query\":\"{ chain_metadata { chain_id latest_processed_block } }\"}' \\"; \
+    echo "            https://hasura-chain-indexer.$zone/v1/graphql | jq ."; \
+    echo; \
+    echo "note:     the browser will warn about the certificate; staging uses the Let's Encrypt staging root"
 
 grafana-staging:
     @echo "url:      https://grafana.{{ stg_zone }}"
