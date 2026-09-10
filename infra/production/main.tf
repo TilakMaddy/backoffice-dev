@@ -27,6 +27,19 @@ resource "aws_s3_bucket" "pg_backups" {
   region = local.region
   bucket = local.pg_backups_bucket
   tags   = local.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+resource "aws_s3_bucket_versioning" "pg_backups" {
+  region = local.region
+  bucket = aws_s3_bucket.pg_backups.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "pg_backups" {
@@ -64,6 +77,17 @@ resource "aws_s3_bucket_lifecycle_configuration" "pg_backups" {
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
+    }
+  }
+
+  rule {
+    id     = "expire-noncurrent-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
     }
   }
 }
