@@ -16,7 +16,7 @@ bootstrap target="":
 destroy target="":
     ./scripts/destroy.sh {{ target }}
 
-stg_zone := "us-west-2-aws-backoffice.oatlabs-staging.oatmilk.work"
+stg_zone := "$(op read 'op://MyIndexer/staging/cluster-zone')"
 
 psql-staging:
     @PGPASSWORD="${PGPASSWORD:-$(op read 'op://MyIndexer/staging/chain-indexer-pg-superuser-password')}" \
@@ -32,6 +32,7 @@ hasura-staging query="{ chain_metadata { chain_id start_block block_height lates
     | jq .
 
 grafana-staging:
-    @op read 'op://MyIndexer/staging/grafana-admin-password' | tr -d '\n' | pbcopy
-    @echo "user $(op read 'op://MyIndexer/staging/grafana-admin-username') -- password copied to clipboard"
-    @open "https://grafana.{{ stg_zone }}"
+    @echo "url:      https://grafana.{{ stg_zone }}"
+    @echo "username: $(op read 'op://MyIndexer/staging/grafana-admin-username')"
+    @echo "password: $(op read 'op://MyIndexer/staging/grafana-admin-password')"
+    @echo "note:     the browser will warn about the certificate; staging uses the Let's Encrypt staging root"
