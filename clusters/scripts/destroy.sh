@@ -50,6 +50,18 @@ delete_stages() {
 
 wipe_leftovers() {
     local lbs
+
+    # A Gateway owns the LoadBalancer Service that envoy-gateway creates for it,
+    # so deleting the Service first is a race the controller wins -- it rebuilds
+    # it within a second and the NLB is never released. Deleting the Gateway
+    # makes envoy-gateway tear its own Service down, which is what lets the cloud
+    # controller manager release the load balancer. Ignored when the CRD is
+    # already gone, which is the normal case once the stages pruned cleanly.
+    if kc get crd gateways.gateway.networking.k8s.io >/dev/null 2>&1; then
+        log "  deleting Gateways so their LoadBalancer Services are released"
+        kc delete gateway --all --all-namespaces --timeout=5m || true
+    fi
+
     kc delete pvc --all --all-namespaces --timeout=10m
 
     lbs="$(kc get svc --all-namespaces \
