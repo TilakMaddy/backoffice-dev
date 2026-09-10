@@ -49,6 +49,7 @@ spec:
             name: cloudflare-api-token-secret
             key: api-token
     sources:
+      - service
       - gateway-tlsroute
       - gateway-httproute
 
