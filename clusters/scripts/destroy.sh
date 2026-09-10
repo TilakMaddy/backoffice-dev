@@ -19,10 +19,12 @@ halt_reconciliation() {
     fx suspend kustomization flux-system
 
     # Suspending the source only stops new fetches: every Kustomization keeps
-    # reconciling the artifact source-controller already has on disk. So a live
-    # parent puts a just-deleted child straight back, and the delete below waits
-    # out its whole timeout for an inventory that keeps returning. Suspending the
-    # entire tree up front is what makes child-before-parent deletion stick.
+    # reconciling the artifact source-controller already has on disk, so a live
+    # parent puts a just-deleted child straight back and the delete waits out its
+    # whole timeout for an inventory that keeps returning. The whole tree is
+    # suspended here; delete_stages resumes each one immediately before deleting
+    # it, because flux drops the finalizer without pruning when a Kustomization
+    # is suspended -- suspended-and-deleted would leave every workload running.
     for stage in "${stages[@]}"; do
         kc get kustomization "$stage" -n flux-system >/dev/null 2>&1 || continue
         fx suspend kustomization "$stage"
@@ -37,6 +39,10 @@ delete_stages() {
             continue
         fi
         log "  $stage: deleting and waiting for its inventory to be garbage-collected"
+        # Resume so the delete actually prunes; the parent stays suspended, which
+        # is what keeps the delete from being undone. --wait=false because the
+        # next line deletes it rather than waiting for a reconcile.
+        fx resume kustomization "$stage" --wait=false
         fx delete kustomization "$stage" --silent
         kc wait --for=delete kustomization/"$stage" -n flux-system --timeout=15m
     done
