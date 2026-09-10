@@ -27,6 +27,8 @@ resource "aws_s3_bucket" "pg_backups" {
   region = local.region
   bucket = local.pg_backups_bucket
   tags   = local.tags
+
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "pg_backups" {
