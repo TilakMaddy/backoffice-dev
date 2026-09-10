@@ -159,16 +159,22 @@ create() {
 }
 
 backfill() {
-    local env_name="$1" field
+    local env_name="$1" field current desired
     local assignments=()
 
     for field in "${fields[@]}"; do
-        # Terraform-backed fields are rewritten every run rather than left alone.
-        # When terraform could not be read, an existing value is kept and only a
-        # missing one is seeded, so the field always exists for External Secrets.
+        # Terraform-backed fields track terraform, so they are written only when
+        # it disagrees with what the vault already holds -- rerunning with an
+        # unchanged bucket writes nothing. When terraform could not be read an
+        # existing value is kept and only a missing one is seeded, so the field
+        # always exists for External Secrets.
         if is_terraform_field "$field"; then
-            if [[ "$tf_available" == yes ]] \
-                || [[ -z "$(op read "op://$vault/$env_name/$field" 2>/dev/null)" ]]; then
+            current="$(op read "op://$vault/$env_name/$field" 2>/dev/null || true)"
+            if [[ "$tf_available" == yes ]]; then
+                desired="$(value_for "$env_name" "$field")"
+                [[ "$current" == "$desired" ]] && continue
+                assignments+=("${field}[password]=$desired")
+            elif [[ -z "$current" ]]; then
                 assignments+=("${field}[password]=$(value_for "$env_name" "$field")")
             fi
             continue
