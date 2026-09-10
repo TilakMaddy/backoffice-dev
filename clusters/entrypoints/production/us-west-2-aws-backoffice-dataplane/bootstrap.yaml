@@ -19,7 +19,7 @@ data:
   OP_VAULT_RESEND_SMTP_PASSWORD: production/resend-smtp-password
 
   # common
-  PLATFORM_SOURCE: platform-foundation
+  PLATFORM_SOURCE: flux-system
   PLATFORM_PATH_PREFIX: ./clusters/packages/layer-zero
   PLATFORM_NAMESPACE: platform-system
   ACME_ENV: production # staging | production
@@ -29,21 +29,6 @@ data:
   FLUX_TIMEOUT: 5m0s
   ENVOY_REPLICAS: "3"
   SHIM_REPLICAS: "3"
-
----
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: platform-foundation
-  namespace: flux-system
-spec:
-  interval: 1m0s
-  ref:
-    branch: production
-  secretRef:
-    name: flux-system
-  recurseSubmodules: true
-  url: https://github.com/TilakMaddy/hyperindex-openinfra.git
 
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -60,7 +45,7 @@ spec:
   wait: true
   sourceRef:
     kind: GitRepository
-    name: platform-foundation
+    name: flux-system
   postBuild:
     substituteFrom:
       - kind: ConfigMap

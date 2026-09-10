@@ -7,6 +7,17 @@ entrypoint's `bootstrap.yaml` points at this repo, and the package is found at
 change to the platform and a change to the cluster that consumes it land in one
 commit, rather than needing a push here and a submodule pointer bump.
 
+That is the intended shape, and not what the entrypoints hold right now: no
+`platform-foundation` `GitRepository` is declared, and `PLATFORM_SOURCE` points at
+`flux-system` instead — the source `flux bootstrap` creates, same repo, same branch
+per environment, same deploy key. Flux syncs identically either way, and
+`recurseSubmodules` costs nothing to lose while this repo has no submodules.
+`platform-foundation` is meant to come back, so the block is commented out in
+`local/`'s `bootstrap.yaml` rather than deleted, as are the two lines naming it in
+`clusters/scripts/bootstrap.sh` and `clusters/scripts/destroy.sh`. Restoring it
+means putting the `GitRepository` back in all three entrypoints and pointing
+`PLATFORM_SOURCE` and the `bootstrap` Kustomization's `sourceRef.name` at it again.
+
 Its upstream is https://github.com/TilakMaddy/layer-zero — this copy is a fork in
 practice, so changes made here do not flow back on their own.
 

@@ -14,7 +14,7 @@ stages=(observability-instances observability-collectors pg-backups apps common 
 
 halt_reconciliation() {
     fx suspend source git flux-system
-    fx suspend source git platform-foundation
+    # fx suspend source git platform-foundation
     fx suspend kustomization flux-system
 }
 

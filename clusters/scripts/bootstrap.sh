@@ -27,7 +27,7 @@ resume_if_suspended() {
 
 resume_halted_reconciliation() {
     resume_if_suspended gitrepository flux-system source git
-    resume_if_suspended gitrepository platform-foundation source git
+    # resume_if_suspended gitrepository platform-foundation source git
     resume_if_suspended kustomization flux-system kustomization
 }
 
