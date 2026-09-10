@@ -13,9 +13,20 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 stages=(observability-instances observability-collectors pg-backups apps common observability-operators observability shims core base operators underlay secrets-eso secrets-operators secrets bootstrap)
 
 halt_reconciliation() {
+    local stage
+
     fx suspend source git flux-system
-    # fx suspend source git platform-foundation
     fx suspend kustomization flux-system
+
+    # Suspending the source only stops new fetches: every Kustomization keeps
+    # reconciling the artifact source-controller already has on disk. So a live
+    # parent puts a just-deleted child straight back, and the delete below waits
+    # out its whole timeout for an inventory that keeps returning. Suspending the
+    # entire tree up front is what makes child-before-parent deletion stick.
+    for stage in "${stages[@]}"; do
+        kc get kustomization "$stage" -n flux-system >/dev/null 2>&1 || continue
+        fx suspend kustomization "$stage"
+    done
 }
 
 delete_stages() {
