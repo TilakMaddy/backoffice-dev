@@ -96,7 +96,7 @@ select_env() {
 }
 
 main() {
-    local env_name matches picked
+    local env_name matches picked field
 
     # One env, named or picked interactively.
     if [[ -n "${1:-}" ]]; then
@@ -135,8 +135,23 @@ main() {
         esac
     done
 
+    # Only the fields left on a placeholder actually need attention, so they are
+    # marked rather than leaving the reader to check each one by hand.
     printf '\nfill in by hand, per item:\n'
-    printf '    %s\n' "${external_fields[@]}"
+    local placeholders=0
+    for field in "${external_fields[@]}"; do
+        if [[ "$(op read "op://$vault/${envs[0]}/$field" 2>/dev/null)" == REPLACE_ME-* ]]; then
+            printf '    %s *\n' "$field"
+            placeholders=$((placeholders + 1))
+        else
+            printf '    %s\n' "$field"
+        fi
+    done
+
+    if [[ "$placeholders" -gt 0 ]]; then
+        printf '\n* holds the REPLACE_ME placeholder (%d of %d)\n' \
+            "$placeholders" "${#external_fields[@]}"
+    fi
 }
 
 count_items() {
