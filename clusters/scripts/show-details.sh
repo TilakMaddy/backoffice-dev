@@ -93,10 +93,14 @@ printf '  port:     5432\n'
 printf '  database: indexer-db\n'
 printf '  username: postgres  (SUPERUSER -- unrestricted on every database)\n'
 printf '  password: %s\n' "$pg_pass"
-printf '  ssl mode: verify-full\n'
-printf '  url:      postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full\n' \
+printf '  ssl mode: verify-full\n\n'
+
+printf '  Import URL\n'
+printf '    postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full\n\n' \
     "$pg_pass_enc" "$zone"
-printf '  psql:     psql "postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full&sslrootcert=%s"\n\n' \
+
+printf '  SQL Shell\n'
+printf '    psql "postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full&sslrootcert=%s"\n\n' \
     "$pg_pass_enc" "$zone" "$ca"
 
 printf 'ssl ca:     %s\n' "$ca"
