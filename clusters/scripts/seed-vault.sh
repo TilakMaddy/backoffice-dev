@@ -89,16 +89,29 @@ external_fields=(
     grafana-smtp-from-address
 )
 
-main() {
-    local env_name matches
+# Same shape as lib.sh's select_target, over envs rather than <env>/<cluster>
+# targets -- what gets seeded is an env's items, and every env shares a cluster.
+select_env() {
+    fzf --prompt="seed-vault > " --height='~40%' --no-multi <<<"$(printf '%s\n' "${envs[@]}")"
+}
 
-    # One env, or every env when the argument is omitted.
+main() {
+    local env_name matches picked
+
+    # One env, named or picked interactively.
     if [[ -n "${1:-}" ]]; then
         if ! printf '%s\n' "${envs[@]}" | grep -qx -- "$1"; then
             printf 'error: unknown env %s, expected one of: %s\n' "$1" "${envs[*]}" >&2
             exit 1
         fi
         envs=("$1")
+    else
+        picked="$(select_env)" || true
+        if [[ -z "$picked" ]]; then
+            printf 'usage: %s <env>   (one of: %s)\n' "$0" "${envs[*]}" >&2
+            exit 1
+        fi
+        envs=("$picked")
     fi
 
     if ! op vault get "$vault" >/dev/null 2>&1; then

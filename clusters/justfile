@@ -1,4 +1,4 @@
-# Seed one env's 1Password items with placeholders; omit it to seed all three.
+# Seed one env's 1Password items with placeholders; omit it to pick one.
 seed-vault env="":
     ./scripts/seed-vault.sh {{ env }}
 
