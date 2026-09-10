@@ -73,7 +73,19 @@ hasura_secret="$(op read "$(op_ref OP_VAULT_CHAIN_INDEXER_HASURA_ADMIN_SECRET)")
 pg_pass="$(op read "$(op_ref OP_VAULT_CHAIN_INDEXER_PG_SUPERUSER_PASSWORD)")"
 
 pg_pass_enc="$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' "$pg_pass")"
-ca="$repo_root/clusters/tests/stg-root-x1.pem"
+
+# Only the staging ACME endpoint issues from a root nothing trusts. Production
+# chains to the public Let's Encrypt root, so pinning a CA there is wrong: every
+# client already trusts it, and the staging root would reject the certificate.
+acme_env="$(awk '/^  ACME_ENV: /{print $2}' "$entrypoint"/bootstrap.yaml)"
+if [[ "$acme_env" == "staging" ]]; then
+    ca="$repo_root/clusters/tests/stg-root-x1.pem"
+else
+    # Not empty: libpq reads ~/.postgresql/root.crt when sslrootcert is unset,
+    # which exists on almost no machine. "system" is the explicit opt-in to the
+    # trust store the public Let's Encrypt root already lives in.
+    ca=system
+fi
 
 printf '%s (%s)\n\n' "$target" "$zone"
 
@@ -103,11 +115,10 @@ printf '  SQL Shell\n'
 printf '    psql "postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full&sslrootcert=%s"\n\n' \
     "$pg_pass_enc" "$zone" "$ca"
 
-printf 'ssl ca:     %s\n' "$ca"
-
-# The staging ACME endpoint issues from a root nothing trusts, so every client
-# needs the CA above; production certs chain to the real Let's Encrypt root.
-if [[ "$(awk '/^  ACME_ENV: /{print $2}' "$entrypoint"/bootstrap.yaml)" == "staging" ]]; then
+if [[ "$ca" == system ]]; then
+    printf 'ssl ca:     system trust store (sslrootcert=system)\n'
+else
+    printf 'ssl ca:     %s\n' "$ca"
     printf 'note:       certificates chain to the Let'"'"'s Encrypt STAGING root, so browsers\n'
     printf '            warn and curl/psql need the CA above.\n'
 fi
