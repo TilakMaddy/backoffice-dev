@@ -85,6 +85,42 @@ and `critical` reach you. Every alert the Production tier offers:
 
 ## The stack
 
+```mermaid
+flowchart LR
+  HS["HyperSync"]
+  CL["your clients"]
+
+  subgraph gw["Envoy Gateway · deny by default"]
+    R1["HTTPRoute<br/>hasura.your.zone"]
+    R2["TLSRoute<br/>postgres-rw / -ro"]
+  end
+
+  subgraph k8s["Talos cluster on EC2"]
+    IDX["indexer"]
+    HAS["Hasura"]
+    POOL["CNPG pooler"]
+    PG[("Postgres<br/>3 instances")]
+    OBS["Prometheus · Loki<br/>Grafana"]
+  end
+
+  S3[("S3")]
+
+  HS -->|"events"| IDX
+  CL -->|"GraphQL, IP allowlist"| R1
+  CL -->|"psql, IP allowlist"| R2
+  R1 --> HAS
+  R2 --> POOL
+  IDX -->|"writes rows"| PG
+  HAS -->|"reads"| PG
+  POOL --> PG
+  PG -->|"base backups + WAL"| S3
+  IDX -->|"metrics, logs"| OBS
+```
+
+Both ways in cross the same gateway, which denies anything not on the allowlist; the
+indexer and Hasura talk to Postgres directly, and only outside clients go through the
+pooler.
+
 | layer | |
 |---|---|
 | Cloud | AWS — EC2, VPC, S3, IAM |
