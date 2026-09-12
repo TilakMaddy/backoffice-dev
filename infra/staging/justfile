@@ -3,12 +3,19 @@ set dotenv-load := true # supply AWS_* variables for authentication.
 kubeconfig_dir := justfile_directory() / ".kube"
 talosconfig_dir := justfile_directory() / ".talos"
 
-apply:
+apply: && fetch-configs
     terraform init
-    terraform apply -auto-approve
+    terraform apply -auto-approve -input=false
 
 destroy:
-    terraform destroy
+    terraform destroy -auto-approve -input=false
+
+fetch-configs:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for cluster in $(jq -r '.k8s_clusters | keys[]' {{justfile_directory()}}/config.json); do
+        {{just_executable()}} fetch-config "$cluster"
+    done
 
 fetch-config cluster:
     mkdir -p {{kubeconfig_dir}} {{talosconfig_dir}}
