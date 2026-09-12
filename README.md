@@ -1,6 +1,6 @@
 # HyperIndex OpenInfra — Self-Hosted HyperIndex for Everyone
 
-A free, self-hosted alternative to HyperIndex Cloud Offering that aims for 100% feature parity with @enviodev's dedicated plan.
+A free, self-hosted alternative to [HyperIndex Cloud](https://envio.dev/pricing/hosting) Offering that aims for 100% feature parity with @enviodev's dedicated plan.
 
 You only need a HyperSync token, not a HyperIndex cloud plan.
 
