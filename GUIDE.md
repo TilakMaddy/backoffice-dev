@@ -16,29 +16,17 @@ Phase 1 and Phase 2 are independent enough to keep in two terminal sessions, one
 `infra/staging` and one in `clusters`. Phase 2 reads Terraform's outputs, so run Phase 1
 first and keep its terminal around.
 
-## Environments, and the branch rule
+Everything below is written for the `staging` environment and the cluster that ships with
+it, `us-west-2-aws-backoffice-dataplane`. Stay on the `staging` branch the whole way
+through:
 
-Every command below is written for the `staging` environment and the cluster that ships
-with it, `us-west-2-aws-backoffice-dataplane`. `production` has the same shape end to end:
-its own `infra/production/`, its own entrypoint under `clusters/entrypoints/production/`,
-its own `production/*` fields in the vault. It is covered in
-[Doing it again for production](#doing-it-again-for-production) once staging is up.
-`local` is a kind cluster (`infra/local`) for trying things without an AWS bill.
+```sh
+git checkout staging
+```
 
-One branch per environment, and you have to be standing on it. The branch is not written
-down anywhere you can edit. `just bootstrap` reads the branch your working tree is
-currently on, bootstraps the cluster against that, and commits `flux-system` back to it.
-From then on the cluster follows that branch, so every push to it is a deploy.
-
-| environment | branch | before bootstrapping |
-|---|---|---|
-| staging | `staging` | `git checkout staging` |
-| production | `production` | `git checkout production` |
-
-`dev` is where you work. Merge `dev` into `staging` to ship to staging, and `staging` into
-`production` once it has proved itself. Bootstrap staging while sitting on `production`
-and the staging cluster will follow production's branch, with nothing to warn you, so
-check `git rev-parse --abbrev-ref HEAD` first, every time.
+A cluster follows the branch you bootstrap it from, which is why staging has its own. Once
+staging is running, [Doing it again for production](#doing-it-again-for-production) covers
+the second environment.
 
 ## Before you start
 
@@ -137,12 +125,8 @@ Terminal A, from `infra/staging`. Nothing here touches 1Password, GitHub or Flux
 Terraform and AWS only.
 
 ```sh
-git checkout staging
 cd infra/staging
 ```
-
-Terraform does not care which branch you are on, but everything you edit from here lands
-in commits, and those commits have to end up on the branch this cluster will follow.
 
 ### 1.1 Point Terraform at your AWS account
 
@@ -237,14 +221,12 @@ To fetch the kubeconfig again later without an apply:
 
 ## Phase 2: bring up the cluster
 
-Terminal B, from `clusters`, on the same `staging` branch.
+Terminal B, from `clusters`. This phase fills 1Password, commits the entrypoint, and
+hands the cluster to Flux.
 
 ```sh
-git checkout staging
 cd clusters
 ```
-
-This phase fills 1Password, commits the entrypoint, and hands the cluster to Flux.
 
 ### 2.1 Supply the two tokens
 
@@ -526,9 +508,10 @@ database. The vault name itself is the one value the two entrypoints have to agr
 if they name different vaults in `bootstrap.yaml`, `seed-vault` refuses to guess which one
 you meant.
 
-Promoting a change from then on is a merge: merge `dev` into `staging`, watch the staging
-cluster converge, then merge `staging` into `production`. Flux is watching both branches,
-so the push is the deploy. The indexer image is the exception, since Keel rolls that
+With both clusters up, each one watches its own branch, so a push to `staging` or
+`production` is a deploy. That makes promoting a change a merge rather than a command: do
+the work on `dev`, merge it into `staging`, watch the staging cluster converge, then merge
+`staging` into `production`. The indexer image is the exception, since Keel rolls that
 forward on its own when you push a new image to the tag in `indexer-image-name`.
 
 ## Tearing it down
@@ -571,3 +554,7 @@ Kubernetes upgrades, and how the backup bucket is wired, are in
 | [`clusters/packages/layer-zero/README.md`](clusters/packages/layer-zero/README.md) | the platform package: its `platform-vars` interface and the three stages it creates |
 | [`clusters/apps/README.md`](clusters/apps/README.md) | the chain-indexer app, and how the Postgres backup toggle works |
 | [README layout table](README.md#layout) | the rest of the tree |
+
+`infra/local` is a kind cluster for trying the platform out on your own machine, with no
+AWS account and no bill. It uses the same `clusters/` half of the guide, against the
+`local` entrypoint.
