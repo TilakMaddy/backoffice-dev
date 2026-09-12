@@ -4,10 +4,11 @@ kubeconfig_dir := justfile_directory() / ".kube"
 talosconfig_dir := justfile_directory() / ".talos"
 
 apply: && fetch-configs
-    terraform init
+    terraform init -input=false
     terraform apply -auto-approve -input=false
 
 destroy:
+    terraform init -input=false
     terraform destroy -auto-approve -input=false
 
 fetch-configs:
