@@ -3,23 +3,26 @@
 Requires `terraform`, `just`, `jq`, `helm`, `kubectl` and AWS credentials on your machine. Refer `.env.sample`.
  
 Step 1: Bootstrap the Kubernetes infrastructure on AWS for all clusters in `config.json`.
+`apply` ends with `fetch-configs`, so the Kubernetes and Talos credentials for every
+cluster in `config.json` are written to `.kube/` and `.talos/` on the way out.
 ```sh
 just apply
 ```
 
-Step 2: Fetch Kubernetes and Talos credentials for the us-west-2-aws-backoffice-dataplane cluster from terraform state and save them to `.kube/` and `.talos/` respectively.
-```sh
-just fetch-config us-west-2-aws-backoffice-dataplane
-```
-
-Step 3: Now you are ready to deploy apps with `kubectl` with the below configuration.
+Step 2: Now you are ready to deploy apps with `kubectl` with the below configuration.
 ```bash
 export KUBECONFIG=.kube/us-west-2-aws-backoffice-dataplane.config
 ```
 
-Step 4: To use `talosctl` for cluster administration
+Step 3: To use `talosctl` for cluster administration
 ```bash
 export TALOSCONFIG=.talos/us-west-2-aws-backoffice-dataplane.config
+```
+
+To refresh one cluster's credentials without an apply — after a `terraform destroy` and
+rebuild, or on a machine that has the state but not the files:
+```sh
+just fetch-config us-west-2-aws-backoffice-dataplane
 ```
 
 # FAQ
@@ -105,7 +108,7 @@ unhealthy. `terraform apply` then stops at the health check, which runs *before*
 that would remove the taint, so re-applying will not fix it. Clear it by hand first:
 
 ```sh
-just fetch-config
+export KUBECONFIG=.kube/us-west-2-aws-backoffice-dataplane.config
 kubectl taint node <node> <key>:NoExecute-
 ```
 
@@ -158,7 +161,20 @@ attaching nothing.
 
 ## Module source
 
-`main.tf` sources `terraform-aws-k8s-lima` from a local checkout at
-`/Users/tilakmadichetti/Code/oatlabs/terraform-aws-k8s-lima`, not from the registry, so
-there is no pinned `version`. The `namespace` field this `config.json` declares is not in
-a published release yet.
+`main.tf` sources `oatlabs/k8s-lima/aws` from the Terraform registry, pinned to `0.0.3`.
+Bumping it is a two-line change — `version` here and whatever `config.json` fields the new
+release adds — and `terraform init -upgrade` to move the lock file.
+
+To work against an unreleased change, point `source` at a local checkout and drop
+`version`:
+
+```hcl
+module "marvel" {
+  source = "/path/to/terraform-aws-k8s-lima"
+
+  config = file("${path.module}/config.json")
+}
+```
+
+Put it back before committing — a local path is not resolvable for anyone else, and
+`.terraform.lock.hcl` does not record it.
