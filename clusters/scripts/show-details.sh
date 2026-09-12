@@ -99,21 +99,29 @@ printf '  console:  https://hasura-chain-indexer.%s/console\n' "$zone"
 printf '  graphql:  https://hasura-chain-indexer.%s/v1/graphql\n' "$zone"
 printf '  password: %s   (admin secret -- hasura has no usernames)\n\n' "$hasura_secret"
 
+pg_endpoint() {
+    local label="$1" host="$2.$zone"
+    printf '  %s\n' "$label"
+    printf '    host:     %s\n\n' "$host"
+
+    printf '    Import URL\n'
+    printf '      postgresql://postgres:%s@%s:5432/indexer-db?sslmode=verify-full\n\n' \
+        "$pg_pass_enc" "$host"
+
+    printf '    SQL Shell\n'
+    printf '      psql "postgresql://postgres:%s@%s:5432/indexer-db?sslmode=verify-full&sslrootcert=%s"\n\n' \
+        "$pg_pass_enc" "$host" "$ca"
+}
+
 printf 'POSTGRES\n'
-printf '  host:     postgres-chain-indexer.%s\n' "$zone"
 printf '  port:     5432\n'
 printf '  database: indexer-db\n'
 printf '  username: postgres  (SUPERUSER -- unrestricted on every database)\n'
 printf '  password: %s\n' "$pg_pass"
 printf '  ssl mode: verify-full\n\n'
 
-printf '  Import URL\n'
-printf '    postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full\n\n' \
-    "$pg_pass_enc" "$zone"
-
-printf '  SQL Shell\n'
-printf '    psql "postgresql://postgres:%s@postgres-chain-indexer.%s:5432/indexer-db?sslmode=verify-full&sslrootcert=%s"\n\n' \
-    "$pg_pass_enc" "$zone" "$ca"
+pg_endpoint 'READ-WRITE (primary)' postgres-chain-indexer-rw
+pg_endpoint 'READ-ONLY (replicas -- writes are rejected)' postgres-chain-indexer-ro
 
 if [[ "$ca" == system ]]; then
     printf 'ssl ca:     system trust store (sslrootcert=system)\n'

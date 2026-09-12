@@ -16,29 +16,10 @@ spec:
           port: ${APP_CHAIN_INDEXER_HASURA_PORT}
 
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: hasura-chain-indexer-allowlist
-  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
-spec:
-  targetRefs:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      name: ${APP_CHAIN_INDEXER_GRAPHQL_ROUTE}
-  authorization:
-    defaultAction: Deny
-    rules:
-      - name: allowed-clients
-        action: Allow
-        principal:
-          clientCIDRs: ${CHAIN_INDEXER_HASURA_ALLOWED_CIDRS}
-
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
 metadata:
-  name: ${APP_CHAIN_INDEXER_PG_ROUTE}
+  name: ${APP_CHAIN_INDEXER_PG_ROUTE}-rw
   namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
   parentRefs:
@@ -46,40 +27,26 @@ spec:
       namespace: ${PLATFORM_NAMESPACE}
       sectionName: postgres-direct
   hostnames:
-    - ${APP_CHAIN_INDEXER_PG_HOSTNAME}.${CLUSTER_ZONE}
+    - ${APP_CHAIN_INDEXER_PG_HOSTNAME}-rw.${CLUSTER_ZONE}
   rules:
     - backendRefs:
-        - name: ${APP_CHAIN_INDEXER_PG_POOLER}
+        - name: ${APP_CHAIN_INDEXER_PG_POOLER}-rw
           port: 5432
 
 ---
-apiVersion: gateway.envoyproxy.io/v1alpha1
-kind: EnvoyPatchPolicy
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
 metadata:
-  name: pg-chain-indexer-allowlists
-  namespace: ${PLATFORM_NAMESPACE}
+  name: ${APP_CHAIN_INDEXER_PG_ROUTE}-ro
+  namespace: ${APP_CHAIN_INDEXER_NAMESPACE}
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: Gateway
-    name: gateway
-  type: JSONPatch
-  jsonPatches:
-    - type: "type.googleapis.com/envoy.config.listener.v3.Listener"
-      name: "${PLATFORM_NAMESPACE}/gateway/postgres-direct"
-      operation:
-        jsonPath: "$.filter_chains[?(@.name == 'tlsroute/${APP_CHAIN_INDEXER_NAMESPACE}/${APP_CHAIN_INDEXER_PG_ROUTE}')]"
-        path: "/filters/0"
-        op: add
-        value:
-          name: envoy.filters.network.rbac
-          typed_config:
-            "@type": type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
-            stat_prefix: allowlist_chain_indexer
-            rules:
-              action: ALLOW
-              policies:
-                allowed-clients:
-                  permissions:
-                    - any: true
-                  principals: ${CHAIN_INDEXER_PG_ALLOWED_PRINCIPALS}
+  parentRefs:
+    - name: gateway
+      namespace: ${PLATFORM_NAMESPACE}
+      sectionName: postgres-direct
+  hostnames:
+    - ${APP_CHAIN_INDEXER_PG_HOSTNAME}-ro.${CLUSTER_ZONE}
+  rules:
+    - backendRefs:
+        - name: ${APP_CHAIN_INDEXER_PG_POOLER}-ro
+          port: 5432
