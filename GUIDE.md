@@ -221,8 +221,8 @@ To fetch the kubeconfig again later without an apply:
 
 ## Phase 2: bring up the cluster
 
-Terminal B, from `clusters`. This phase fills 1Password, commits the entrypoint, and
-hands the cluster to Flux.
+Terminal B, from `clusters`. This phase points the entrypoint at your vault, commits it,
+fills 1Password, and hands the cluster to Flux.
 
 ```sh
 cd clusters
@@ -299,7 +299,9 @@ template shipped: the `MyIndexer` vault name, the wide-open CIDRs, someone else'
 settings. The same holds for every later change, since editing a variable does nothing
 until it is pushed to this branch.
 
-### 2.4 Create the 1Password fields
+### 2.4 Fill the vault
+
+Three moves: create the fields, fill the eleven that need you, rerun to confirm.
 
 ```sh
 op signin          # as yourself, not the service account
@@ -323,11 +325,7 @@ fill in by hand, per item:
 * holds the REPLACE_ME placeholder (11 of 11)
 ```
 
-**Next:** fill the starred ones, and leave everything else in the item alone.
-
-### 2.5 Fill in the eleven fields
-
-Open the `staging` item in 1Password and replace each `REPLACE_ME-…` value:
+**Next:** open the `staging` item in 1Password and replace each `REPLACE_ME-…` value.
 
 | field | what to put there |
 |---|---|
@@ -365,7 +363,7 @@ Leave these alone too, because Terraform owns them: `pg-backup-destination` and
 `seed-vault`, so the bucket the cluster backs up to cannot drift from the bucket that
 exists.
 
-Then confirm:
+With the eleven filled in, rerun the same command to check your work:
 
 ```sh
 just seed-vault staging
@@ -375,7 +373,7 @@ just seed-vault staging
 `*` lines left. A `skipped … pg-backup-*` line means Phase 1's Terraform state was not
 readable, so go back to 1.4.
 
-### 2.6 Hand the cluster to Flux
+### 2.5 Hand the cluster to Flux
 
 ```sh
 git rev-parse --abbrev-ref HEAD     # must say: staging
@@ -394,7 +392,7 @@ to your repo on the current branch.
 
 **Next:** from here everything is Flux's, and nothing else is applied by hand.
 
-### 2.7 Watch it converge
+### 2.6 Watch it converge
 
 ```sh
 export KUBECONFIG=../infra/staging/.kube/us-west-2-aws-backoffice-dataplane.config
@@ -442,9 +440,8 @@ Two things that trip people up here:
   nothing trusts: browsers warn, and `psql` needs the CA bundled at
   `clusters/tests/stg-root-x1.pem` (`show-details` puts it in the command for you). Switch
   `ACME_ENV` to `production` when you are ready for real certificates.
-- Access is gated at the gateway by the CIDR allowlists from 2.2, as you pushed them in
-  2.3. If a URL times out from your laptop and the pods are healthy, that is the first
-  thing to check.
+- Access is gated at the gateway by the CIDR allowlists you set in 2.2. If a URL times
+  out from your laptop and the pods are healthy, that is the first thing to check.
 
 Then confirm the indexer is actually indexing:
 
@@ -548,13 +545,13 @@ Day-two operations, including sizing nodes, dedicating one to a workload, Talos 
 Kubernetes upgrades, and how the backup bucket is wired, are in
 [`infra/staging/README.md`](infra/staging/README.md).
 
+`infra/local` is a kind cluster for trying the platform out on your own machine, with no
+AWS account and no bill. It uses the same `clusters/` half of the guide, against the
+`local` entrypoint.
+
 | | |
 |---|---|
 | [`clusters/entrypoints/README.md`](clusters/entrypoints/README.md) | what each entrypoint file declares, and the `OP_VAULT_*` contract |
 | [`clusters/packages/layer-zero/README.md`](clusters/packages/layer-zero/README.md) | the platform package: its `platform-vars` interface and the three stages it creates |
 | [`clusters/apps/README.md`](clusters/apps/README.md) | the chain-indexer app, and how the Postgres backup toggle works |
 | [README layout table](README.md#layout) | the rest of the tree |
-
-`infra/local` is a kind cluster for trying the platform out on your own machine, with no
-AWS account and no bill. It uses the same `clusters/` half of the guide, against the
-`local` entrypoint.
